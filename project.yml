@@ -1,0 +1,78 @@
+name: OpenStream
+options:
+  bundleIdPrefix: app.openstream
+  deploymentTarget:
+    macOS: "14.0"
+  createIntermediateGroups: true
+  developmentLanguage: en
+settings:
+  base:
+    SWIFT_VERSION: "6.0"
+    MACOSX_DEPLOYMENT_TARGET: "14.0"
+    ENABLE_HARDENED_RUNTIME: YES
+    ENABLE_TESTABILITY: YES
+targets:
+  OpenStream:
+    type: application
+    platform: macOS
+    sources:
+      - path: OpenStream
+        excludes:
+          - Resources/AppIcon.iconset/**
+          - Resources/AppIcon.icns
+          - Resources/AppIcon-1024.png
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: app.openstream.OpenStream
+        PRODUCT_NAME: OpenStream
+        MARKETING_VERSION: "0.1.0"
+        CURRENT_PROJECT_VERSION: "1"
+        GENERATE_INFOPLIST_FILE: YES
+        INFOPLIST_KEY_CFBundleDisplayName: OpenStream
+        INFOPLIST_KEY_LSApplicationCategoryType: public.app-category.utilities
+        INFOPLIST_KEY_NSHumanReadableCopyright: ""
+        ASSETCATALOG_COMPILER_APPICON_NAME: AppIcon
+        CODE_SIGN_ENTITLEMENTS: OpenStream/Resources/OpenStream.entitlements
+        CODE_SIGN_IDENTITY: "-"
+        CODE_SIGNING_ALLOWED: YES
+        ENABLE_PREVIEWS: YES
+    entitlements:
+      path: OpenStream/Resources/OpenStream.entitlements
+    scheme:
+      testTargets:
+        - OpenStreamTests
+  OpenStreamCLI:
+    type: tool
+    platform: macOS
+    sources:
+      - path: OpenStreamCLI
+        excludes:
+          - README.md
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: app.openstream.OpenStreamCLI
+        PRODUCT_NAME: openstream-cli
+        SWIFT_VERSION: "6.0"
+        MACOSX_DEPLOYMENT_TARGET: "14.0"
+        CODE_SIGN_IDENTITY: "-"
+        GENERATE_INFOPLIST_FILE: YES
+    scheme: {}
+  OpenStreamTests:
+    type: bundle.unit-test
+    platform: macOS
+    sources:
+      - path: OpenStreamTests
+        excludes:
+          - Fixtures
+      - path: Fixtures
+        type: folder
+        buildPhase: resources
+    dependencies:
+      - target: OpenStream
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: app.openstream.OpenStreamTests
+        GENERATE_INFOPLIST_FILE: YES
+        CODE_SIGN_IDENTITY: "-"
+        TEST_HOST: "$(BUILT_PRODUCTS_DIR)/OpenStream.app/Contents/MacOS/OpenStream"
+        BUNDLE_LOADER: "$(TEST_HOST)"

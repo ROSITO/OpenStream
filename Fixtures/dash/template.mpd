@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<MPD xmlns="urn:mpeg:dash:schema:mpd:2011" type="static" mediaPresentationDuration="PT20S">
+  <Period>
+    <BaseURL>https://cdn.example.com/dash/</BaseURL>
+    <AdaptationSet contentType="video" mimeType="video/mp4">
+      <SegmentTemplate
+        timescale="1000"
+        duration="5000"
+        startNumber="1"
+        initialization="init-$RepresentationID$.mp4"
+        media="chunk-$RepresentationID$-$Number%05d$.m4s"/>
+      <Representation id="v1" bandwidth="1000000" width="1280" height="720" codecs="avc1.4d401f"/>
+    </AdaptationSet>
+  </Period>
+</MPD>

@@ -1,0 +1,63 @@
+# macOS / Xcode
+.DS_Store
+*.swp
+*~
+
+# Xcode
+build/
+DerivedData/
+*.xcuserdata
+*.xccheckout
+*.xcscmblueprint
+xcuserdata/
+*.moved-aside
+*.hmap
+*.ipa
+*.dSYM.zip
+*.dSYM
+timeline.xctimeline
+playground.xcworkspace
+
+# Swift Package Manager
+.build/
+.swiftpm/
+Packages/
+Package.resolved
+
+# CocoaPods / Carthage (si un jour)
+Pods/
+Carthage/Build/
+
+# Secrets & locaux
+.env
+.env.*
+*.pem
+*.p12
+Secrets/
+Config/Local.xcconfig
+
+# FFmpeg binaires locaux / artifacts
+Tools/ffmpeg*
+Vendor/FFmpeg/**/*.a
+Vendor/FFmpeg/**/*.dylib
+*.xcframework/
+
+# App exports / downloads de test
+Downloads/
+*.mp4
+*.ts
+*.m4s
+!Fixtures/**
+
+# IDE / agents locaux (MCP multi-outils, etc.)
+.idea/
+*.code-workspace
+.cursor/
+.codex/
+.gemini/
+.grok/
+.zed/
+.vscode/
+.mcp.json
+opencode.json
+config/mcporter.json
