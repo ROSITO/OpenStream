@@ -21,6 +21,7 @@ struct ContentView: View {
             .navigationSplitViewColumnWidth(min: 280, ideal: 340, max: 460)
         } detail: {
             VStack(spacing: 0) {
+                FFmpegSetupBanner()
                 BrowserPane()
                 if appState.showDownloads {
                     Divider()

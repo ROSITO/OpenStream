@@ -88,24 +88,24 @@ struct FFmpegWrapper: Sendable {
                     // Drain pipes while ffmpeg runs — otherwise stderr progress fills the
                     // ~64 KiB pipe buffer and deadlocks waitUntilExit (0% CPU forever).
                     let group = DispatchGroup()
-                    var stdoutData = Data()
-                    var stderrData = Data()
+                    let stdoutBox = DataBox()
+                    let stderrBox = DataBox()
                     group.enter()
                     DispatchQueue.global(qos: .utility).async {
-                        stdoutData = out.fileHandleForReading.readDataToEndOfFile()
+                        stdoutBox.value = out.fileHandleForReading.readDataToEndOfFile()
                         group.leave()
                     }
                     group.enter()
                     DispatchQueue.global(qos: .utility).async {
-                        stderrData = err.fileHandleForReading.readDataToEndOfFile()
+                        stderrBox.value = err.fileHandleForReading.readDataToEndOfFile()
                         group.leave()
                     }
 
                     process.waitUntilExit()
                     group.wait()
 
-                    let stderr = String(data: stderrData, encoding: .utf8) ?? ""
-                    let stdout = String(data: stdoutData, encoding: .utf8) ?? ""
+                    let stderr = String(data: stderrBox.value, encoding: .utf8) ?? ""
+                    let stdout = String(data: stdoutBox.value, encoding: .utf8) ?? ""
 
                     if process.terminationStatus == 0 {
                         continuation.resume(returning: stdout.isEmpty ? stderr : stdout)
@@ -123,4 +123,9 @@ struct FFmpegWrapper: Sendable {
             }
         }
     }
+}
+
+/// Mutable box so pipe drains can write without capturing `var` across queues.
+final class DataBox: @unchecked Sendable {
+    var value = Data()
 }

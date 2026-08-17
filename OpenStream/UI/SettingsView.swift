@@ -1,3 +1,4 @@
+import AppKit
 import SwiftUI
 
 struct SettingsView: View {
@@ -135,6 +136,43 @@ struct SettingsView: View {
                     TextField("Utilisateur (optionnel)", text: $settings.proxyUsername)
                     SecureField("Mot de passe (optionnel)", text: $settings.proxyPassword)
                 }
+            }
+
+            Section("FFmpeg") {
+                switch appState.ffmpegStatus {
+                case .ready(let path):
+                    Text("Binaire : \(path)")
+                        .font(.caption.monospaced())
+                        .textSelection(.enabled)
+                        .foregroundStyle(.secondary)
+                case .missingFFmpeg:
+                    Text("FFmpeg introuvable. L’assemblage MP4 ne fonctionnera pas.")
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                    Button(appState.ffmpegInstallInProgress ? "Installation…" : "Installer via Homebrew") {
+                        appState.installFFmpegWithBrew()
+                    }
+                    .disabled(appState.ffmpegInstallInProgress)
+                case .missingHomebrew:
+                    Text("Homebrew est requis pour installer FFmpeg automatiquement.")
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                    Button("Ouvrir brew.sh") {
+                        if let url = URL(string: "https://brew.sh") {
+                            NSWorkspace.shared.open(url)
+                        }
+                    }
+                }
+                if let log = appState.ffmpegInstallLog {
+                    Text(log)
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                        .textSelection(.enabled)
+                }
+                Button("Revérifier") {
+                    appState.refreshFFmpegStatus()
+                }
+                .font(.caption)
             }
 
             Section("Entretien") {

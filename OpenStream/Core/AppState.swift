@@ -23,6 +23,9 @@ final class AppState {
     var showBookmarkManager: Bool = false
     var showHistory: Bool = false
     var showBatchSheet: Bool = false
+    var ffmpegStatus: FFmpegSetup.Status = .missingFFmpeg
+    var ffmpegInstallInProgress = false
+    var ffmpegInstallLog: String?
 
     /// Média en attente de choix de variante HLS.
     var pendingVariantMedia: DetectedMedia?
@@ -107,6 +110,30 @@ final class AppState {
         }
         downloadManager.start()
         commandServer.start()
+        refreshFFmpegStatus()
+    }
+
+    func refreshFFmpegStatus() {
+        ffmpegStatus = FFmpegSetup.status()
+        if case .ready = ffmpegStatus {
+            ffmpegInstallLog = nil
+        }
+    }
+
+    func installFFmpegWithBrew() {
+        guard !ffmpegInstallInProgress else { return }
+        ffmpegInstallInProgress = true
+        ffmpegInstallLog = "Installation de FFmpeg via Homebrew…"
+        Task {
+            do {
+                try await FFmpegSetup.installFFmpeg()
+                refreshFFmpegStatus()
+                ffmpegInstallLog = "FFmpeg installé."
+            } catch {
+                ffmpegInstallLog = error.localizedDescription
+            }
+            ffmpegInstallInProgress = false
+        }
     }
 
     func applySettings() {

@@ -84,7 +84,7 @@ Mémoire projet : décisions figées, contraintes, et pièges.
 ## Ouvert / à trancher
 
 - [ ] Licence MIT vs GPLv3 (impact si FFmpeg lié dynamiquement vs statiquement — vérifier compatibilité LGPL FFmpeg)
-- [ ] Distribution FFmpeg : binaire embarqué, XCFramework, ou dépendance Homebrew documentée
+- [x] Distribution FFmpeg : Homebrew (script `scripts/install.sh` + bouton in-app) ; pas de binaire embarqué
 - [ ] Bundle identifier — **tranché :** `app.openstream.OpenStream` (D009)
 - [ ] Stratégie App Sandbox + entitlements réseau / downloads folder — **sandbox ON** (network client + downloads + user-selected R/W) ; à valider en usage réel
 - [ ] Format d'export MVP : MP4 uniquement, ou MKV aussi
@@ -127,7 +127,6 @@ Mémoire projet : décisions figées, contraintes, et pièges.
 | 2026-07-29 | Phase 2 : MediaDetector, HLSParser (master/media/fMP4), MediaCatalog, UI médias classifiés, 11 tests |
 | 2026-07-29 | Fix : MediaCatalog branché sur tous les candidats (xhr/fetch), pas seulement navigation |
 | 2026-07-29 | Phase 3 : DownloadQueue, SQLite jobs, HLS/progressive download, UI progress/cancel/resume |
-| 2026-07-29 | Phase 4 : FFmpegWrapper (D010), MediaAssembler, auto-export MP4 ; film test 590 Mo assemblé |
 | 2026-07-29 | Phase 5 + Settings : dossier, proxy/VPN, retries, choix qualité HLS, cleanup .parts |
 | 2026-07-29 | Indicateur VPN système (utun/ipsec/ppp) dans toolbar + réglages |
 | 2026-07-29 | Phase 6 : DASHParser, download/assemble DASH, audio/subs optionnels, sheet options, fixtures |
@@ -135,3 +134,4 @@ Mémoire projet : décisions figées, contraintes, et pièges.
 | 2026-07-29 | Phase 8 : historique, batch URLs, auto-enqueue, openstream-cli (inbox locale) |
 | 2026-07-29 | Nomenclature export configurable (Jellyfin film/série + custom) + titre/année au download |
 | 2026-07-29 | Download : fenêtre glissante segments + réglage concurrence (défaut 8, max 16) |
+| 2026-08-17 | Dépôt public + release v0.1.0 ; install.sh + setup FFmpeg in-app via Homebrew |
