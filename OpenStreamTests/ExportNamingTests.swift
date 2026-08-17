@@ -3,12 +3,12 @@ import Testing
 @testable import OpenStream
 
 struct ExportNamingTests {
-    @Test func jellyfinMoviePath() {
+    @Test func filmPath() {
         let path = ExportNaming.relativePath(
             template: ExportNamingPreset.jellyfinMovie.template,
             context: ExportNamingContext(title: "Inception", year: "2010")
         )
-        #expect(path == "Inception (2010)/Inception (2010).mp4")
+        #expect(path == "Inception (2010)/Inception.mp4")
     }
 
     @Test func omitsEmptyYearParentheses() {
@@ -19,7 +19,7 @@ struct ExportNamingTests {
         #expect(path == "Untitled Film/Untitled Film.mp4")
     }
 
-    @Test func jellyfinSeriesPathPadsSeasonEpisode() {
+    @Test func seriesPathPadsSeasonEpisode() {
         let path = ExportNaming.relativePath(
             template: ExportNamingPreset.jellyfinSeries.template,
             context: ExportNamingContext(
@@ -29,7 +29,7 @@ struct ExportNamingTests {
                 episode: "7"
             )
         )
-        #expect(path == "Breaking Bad/Season 01/Breaking Bad - S01E07.mp4")
+        #expect(path == "Breaking Bad/Saison 01/S01E07.mp4")
     }
 
     @Test func parsesTitleAndYear() {
@@ -53,7 +53,7 @@ struct ExportNamingTests {
             template: ExportNamingPreset.jellyfinMovie.template,
             context: ExportNamingContext(title: "Heat", year: "1995")
         )
-        #expect(url.lastPathComponent == "Heat (1995).mp4")
+        #expect(url.lastPathComponent == "Heat.mp4")
         #expect(url.deletingLastPathComponent().lastPathComponent == "Heat (1995)")
         #expect(FileManager.default.fileExists(atPath: url.deletingLastPathComponent().path))
     }

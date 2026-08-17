@@ -153,9 +153,13 @@ struct MediaAssembler: Sendable {
         try listBody.write(to: listURL, atomically: true, encoding: .utf8)
         defer { try? FileManager.default.removeItem(at: listURL) }
 
-        if FileManager.default.fileExists(atPath: outputURL.path) {
-            try FileManager.default.removeItem(at: outputURL)
+        // Remux vers un temporaire dans .parts, puis rename atomique — évite
+        // deux jobs concurrentes / un retry qui écrasent un MP4 partiel.
+        let staging = work.appendingPathComponent(".__os_remux.mp4")
+        if FileManager.default.fileExists(atPath: staging.path) {
+            try FileManager.default.removeItem(at: staging)
         }
+        defer { try? FileManager.default.removeItem(at: staging) }
 
         do {
             try await ffmpeg.run(arguments: [
@@ -166,7 +170,7 @@ struct MediaAssembler: Sendable {
                 "-c", "copy",
                 "-bsf:a", "aac_adtstoasc",
                 "-movflags", "+faststart",
-                outputURL.path
+                staging.path
             ])
         } catch {
             try await ffmpeg.run(arguments: [
@@ -176,9 +180,14 @@ struct MediaAssembler: Sendable {
                 "-i", listURL.path,
                 "-c", "copy",
                 "-movflags", "+faststart",
-                outputURL.path
+                staging.path
             ])
         }
+
+        if FileManager.default.fileExists(atPath: outputURL.path) {
+            try FileManager.default.removeItem(at: outputURL)
+        }
+        try FileManager.default.moveItem(at: staging, to: outputURL)
 
         return ExportResult(outputURL: outputURL, usedRemux: true)
     }
@@ -258,7 +267,8 @@ struct MediaAssembler: Sendable {
             ".__merged_tmp.mp4",
             ".__concat_list.txt",
             ".__os_video.mp4",
-            ".__os_audio.mp4"
+            ".__os_audio.mp4",
+            ".__os_remux.mp4"
         ]
         for url in items {
             let name = url.lastPathComponent

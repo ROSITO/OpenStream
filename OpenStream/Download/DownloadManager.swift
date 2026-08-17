@@ -103,7 +103,8 @@ final class DownloadManager {
             exportShow: meta.show,
             exportSeason: meta.season,
             exportEpisode: meta.episode,
-            exportEpisodeTitle: meta.episodeTitle
+            exportEpisodeTitle: meta.episodeTitle,
+            exportNamingPreset: meta.namingPreset
         )
 
         Task {

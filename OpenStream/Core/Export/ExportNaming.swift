@@ -1,6 +1,6 @@
 import Foundation
 
-/// Presets de nomenclature d’export (Jellyfin, plat, custom).
+/// Presets de nomenclature d’export (Film / Série / plat / custom).
 enum ExportNamingPreset: String, CaseIterable, Identifiable, Sendable, Codable {
     case flat
     case jellyfinMovie
@@ -11,9 +11,9 @@ enum ExportNamingPreset: String, CaseIterable, Identifiable, Sendable, Codable {
 
     var label: String {
         switch self {
-        case .flat: return "Fichier plat ({title}.mp4)"
-        case .jellyfinMovie: return "Jellyfin — Film"
-        case .jellyfinSeries: return "Jellyfin — Série"
+        case .flat: return "Fichier plat"
+        case .jellyfinMovie: return "Film"
+        case .jellyfinSeries: return "Série"
         case .custom: return "Personnalisé"
         }
     }
@@ -23,25 +23,32 @@ enum ExportNamingPreset: String, CaseIterable, Identifiable, Sendable, Codable {
         case .flat:
             return "{title}.{ext}"
         case .jellyfinMovie:
-            return "{title} ({year})/{title} ({year}).{ext}"
+            // Film (2020)/Film.mp4
+            return "{title} ({year})/{title}.{ext}"
         case .jellyfinSeries:
-            return "{show}/Season {season}/{show} - S{season}E{episode}.{ext}"
+            // MaSerie/Saison 01/S01E01.mp4
+            return "{show}/Saison {season}/S{season}E{episode}.{ext}"
         case .custom:
-            return "{title} ({year})/{title} ({year}).{ext}"
+            return "{title} ({year})/{title}.{ext}"
         }
     }
 
     var hint: String {
         switch self {
         case .flat:
-            return "Un seul fichier dans le dossier d’export."
+            return "Un seul fichier : Titre.mp4 dans le dossier d’export."
         case .jellyfinMovie:
-            return "Film (2020)/Film (2020).mp4 — idéal pour une bibliothèque Films Jellyfin."
+            return "Film (2020)/Film.mp4 — dossier = nom + année, fichier = nom."
         case .jellyfinSeries:
-            return "Show/Season 01/Show - S01E01.mp4 — renseignez show / saison / épisode à l’export."
+            return "Série/Saison 01/S01E01.mp4 — renseignez série, saison et épisode."
         case .custom:
             return "Tokens : {title} {year} {show} {season} {episode} {episode_title} {kind} {ext}"
         }
+    }
+
+    /// Présets proposés au téléchargement (hors custom global).
+    static var downloadChoices: [ExportNamingPreset] {
+        [.jellyfinMovie, .jellyfinSeries, .flat]
     }
 }
 
@@ -52,6 +59,8 @@ struct ExportMetadata: Sendable, Hashable {
     var season: String?
     var episode: String?
     var episodeTitle: String?
+    /// Surcharge le modèle global (Film / Série / plat) pour ce téléchargement.
+    var namingPreset: ExportNamingPreset?
 
     static func inferred(from displayTitle: String) -> ExportMetadata {
         let parsed = ExportNaming.parseTitleAndYear(from: displayTitle)

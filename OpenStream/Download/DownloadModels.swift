@@ -75,13 +75,15 @@ struct DownloadJob: Identifiable, Sendable, Hashable, Codable {
     var selectedSubtitleTrackURL: URL?
     var selectedSubtitleDashRepresentationID: String?
     var selectedDashVideoRepresentationID: String?
-    /// Métadonnées d’export (nomenclature Jellyfin / custom).
+    /// Métadonnées d’export (nomenclature Film / Série / custom).
     var exportTitle: String?
     var exportYear: String?
     var exportShow: String?
     var exportSeason: String?
     var exportEpisode: String?
     var exportEpisodeTitle: String?
+    /// Si nil → modèle des réglages globaux.
+    var exportNamingPreset: ExportNamingPreset?
     var completedUnitIndices: [Int]
     var createdAt: Date
     var updatedAt: Date
@@ -109,6 +111,7 @@ struct DownloadJob: Identifiable, Sendable, Hashable, Codable {
         exportSeason: String? = nil,
         exportEpisode: String? = nil,
         exportEpisodeTitle: String? = nil,
+        exportNamingPreset: ExportNamingPreset? = nil,
         completedUnitIndices: [Int] = [],
         createdAt: Date = Date(),
         updatedAt: Date = Date()
@@ -135,6 +138,7 @@ struct DownloadJob: Identifiable, Sendable, Hashable, Codable {
         self.exportSeason = exportSeason
         self.exportEpisode = exportEpisode
         self.exportEpisodeTitle = exportEpisodeTitle
+        self.exportNamingPreset = exportNamingPreset
         self.completedUnitIndices = completedUnitIndices
         self.createdAt = createdAt
         self.updatedAt = updatedAt
@@ -142,6 +146,16 @@ struct DownloadJob: Identifiable, Sendable, Hashable, Codable {
 
     var resolvedOutputDirectory: URL {
         outputDirectory ?? AppPreferences.exportRoot
+    }
+
+    var resolvedNamingTemplate: String {
+        if let preset = exportNamingPreset {
+            if preset == .custom {
+                return AppPreferences.current.exportNamingTemplate
+            }
+            return preset.template
+        }
+        return AppPreferences.current.exportNamingTemplate
     }
 
     var namingContext: ExportNamingContext {

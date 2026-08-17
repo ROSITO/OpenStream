@@ -146,11 +146,12 @@ struct MediaDownloadSheet: View {
     @State private var selectedAudioID: MediaTrack.ID?
     @State private var selectedSubtitleID: MediaTrack.ID?
     @State private var includeSubtitle = false
+    @State private var namingPreset: ExportNamingPreset = .jellyfinMovie
     @State private var exportTitle: String = ""
     @State private var exportYear: String = ""
     @State private var exportShow: String = ""
-    @State private var exportSeason: String = ""
-    @State private var exportEpisode: String = ""
+    @State private var exportSeason: String = "1"
+    @State private var exportEpisode: String = "1"
     @FocusState private var titleFocused: Bool
 
     init(
@@ -173,8 +174,8 @@ struct MediaDownloadSheet: View {
         _exportTitle = State(initialValue: parsed.title)
         _exportYear = State(initialValue: parsed.year ?? "")
         _exportShow = State(initialValue: parsed.title)
-        _exportSeason = State(initialValue: "")
-        _exportEpisode = State(initialValue: "")
+        _exportSeason = State(initialValue: "1")
+        _exportEpisode = State(initialValue: "1")
     }
 
     /// Titre détecté (souvent le titre de page — à corriger si besoin).
@@ -187,6 +188,10 @@ struct MediaDownloadSheet: View {
         exportTitle.trimmingCharacters(in: .whitespacesAndNewlines)
     }
 
+    private var activeTemplate: String {
+        namingPreset == .custom ? appState.settings.resolvedNamingTemplate : namingPreset.template
+    }
+
     private var previewPath: String {
         let context = ExportNamingContext(
             title: trimmedTitle.isEmpty ? "video" : trimmedTitle,
@@ -196,10 +201,11 @@ struct MediaDownloadSheet: View {
             episode: exportEpisode.isEmpty ? nil : exportEpisode,
             kind: media.kind
         )
-        return ExportNaming.relativePath(
-            template: appState.settings.resolvedNamingTemplate,
-            context: context
-        )
+        return ExportNaming.relativePath(template: activeTemplate, context: context)
+    }
+
+    private var isSeries: Bool {
+        namingPreset == .jellyfinSeries
     }
 
     var body: some View {
@@ -209,28 +215,48 @@ struct MediaDownloadSheet: View {
 
             Form {
                 Section {
-                    TextField("Ex. Demon Slayer — Le film", text: $exportTitle)
-                        .focused($titleFocused)
-                        .onSubmit { confirmDownload() }
-                    TextField("Année (optionnel)", text: $exportYear)
-                        .frame(maxWidth: 140)
-                    if appState.settings.exportNamingPreset == .jellyfinSeries
-                        || appState.settings.exportNamingPreset == .custom
-                    {
-                        TextField("Série (show)", text: $exportShow)
+                    Picker("Type", selection: $namingPreset) {
+                        ForEach(ExportNamingPreset.downloadChoices) { preset in
+                            Text(preset.label).tag(preset)
+                        }
+                    }
+                    .pickerStyle(.segmented)
+                    .onChange(of: namingPreset) { _, newValue in
+                        if newValue == .jellyfinSeries,
+                           exportShow.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+                        {
+                            exportShow = trimmedTitle
+                        }
+                    }
+
+                    TextField(
+                        isSeries ? "Titre / épisode" : "Ex. Demon Slayer — Le film",
+                        text: $exportTitle
+                    )
+                    .focused($titleFocused)
+                    .onSubmit { confirmDownload() }
+
+                    if namingPreset == .jellyfinMovie {
+                        TextField("Année (optionnel)", text: $exportYear)
+                            .frame(maxWidth: 140)
+                    }
+
+                    if isSeries {
+                        TextField("Nom de la série", text: $exportShow)
                         HStack {
                             TextField("Saison", text: $exportSeason)
                             TextField("Épisode", text: $exportEpisode)
                         }
                     }
+
                     Text(previewPath)
                         .font(.caption.monospaced())
                         .foregroundStyle(.secondary)
                         .textSelection(.enabled)
                 } header: {
-                    Text("Nom du fichier")
+                    Text("Fichier")
                 } footer: {
-                    Text("Corrigez le titre si besoin — le nom détecté vient souvent de la page web.")
+                    Text(namingPreset.hint)
                         .font(.caption)
                 }
 
@@ -281,21 +307,38 @@ struct MediaDownloadSheet: View {
                     .keyboardShortcut(.cancelAction)
                 Button("Télécharger", action: confirmDownload)
                     .keyboardShortcut(.defaultAction)
-                    .disabled(trimmedTitle.isEmpty)
+                    .disabled(!canConfirm)
             }
         }
         .padding()
-        .frame(width: 480, height: sheetHeight)
+        .frame(width: 500, height: sheetHeight)
         .onAppear {
+            let preferred = appState.settings.exportNamingPreset
+            if ExportNamingPreset.downloadChoices.contains(preferred) {
+                namingPreset = preferred
+            } else {
+                namingPreset = .jellyfinMovie
+            }
             DispatchQueue.main.async {
                 titleFocused = true
             }
         }
     }
 
+    private var canConfirm: Bool {
+        guard !trimmedTitle.isEmpty else { return false }
+        if isSeries {
+            let show = exportShow.trimmingCharacters(in: .whitespacesAndNewlines)
+            let season = exportSeason.trimmingCharacters(in: .whitespacesAndNewlines)
+            let episode = exportEpisode.trimmingCharacters(in: .whitespacesAndNewlines)
+            return !show.isEmpty && !season.isEmpty && !episode.isEmpty
+        }
+        return true
+    }
+
     private func confirmDownload() {
+        guard canConfirm else { return }
         let title = trimmedTitle
-        guard !title.isEmpty else { return }
         let variant = media.variants.first { $0.id == selectedVariantID } ?? media.preferredVariant
         let audio = media.audioTracks.first { $0.id == selectedAudioID }
         let subtitle = includeSubtitle
@@ -306,22 +349,19 @@ struct MediaDownloadSheet: View {
             year: exportYear.trimmingCharacters(in: .whitespacesAndNewlines).nilIfEmpty,
             show: exportShow.trimmingCharacters(in: .whitespacesAndNewlines).nilIfEmpty,
             season: exportSeason.trimmingCharacters(in: .whitespacesAndNewlines).nilIfEmpty,
-            episode: exportEpisode.trimmingCharacters(in: .whitespacesAndNewlines).nilIfEmpty
+            episode: exportEpisode.trimmingCharacters(in: .whitespacesAndNewlines).nilIfEmpty,
+            namingPreset: namingPreset
         )
         onConfirm(variant, audio, subtitle, metadata)
     }
 
     private var sheetHeight: CGFloat {
-        var height: CGFloat = 340
+        var height: CGFloat = 400
+        if isSeries { height += 80 }
         if media.variants.count > 1 { height += 56 }
         if !media.audioTracks.isEmpty { height += 56 }
         if !media.subtitleTracks.isEmpty { height += 90 }
-        if appState.settings.exportNamingPreset == .jellyfinSeries
-            || appState.settings.exportNamingPreset == .custom
-        {
-            height += 70
-        }
-        return min(580, height)
+        return min(620, height)
     }
 }
 

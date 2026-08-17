@@ -269,7 +269,7 @@ actor DownloadQueue {
         let assembler = try MediaAssembler()
         let exportRoot = job.resolvedOutputDirectory
         let segmentsDir = job.destinationDirectory
-        let template = AppPreferences.current.exportNamingTemplate
+        let template = job.resolvedNamingTemplate
         let result = try await assembler.assemble(
             jobTitle: job.title,
             kind: job.kind,

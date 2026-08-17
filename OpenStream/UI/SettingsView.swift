@@ -40,8 +40,8 @@ struct SettingsView: View {
                 }
             }
 
-            Section("Nomenclature (Jellyfin…)") {
-                Picker("Modèle", selection: $settings.exportNamingPreset) {
+            Section("Nomenclature") {
+                Picker("Modèle par défaut", selection: $settings.exportNamingPreset) {
                     ForEach(ExportNamingPreset.allCases) { preset in
                         Text(preset.label).tag(preset)
                     }

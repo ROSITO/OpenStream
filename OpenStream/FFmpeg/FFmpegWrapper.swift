@@ -84,10 +84,26 @@ struct FFmpegWrapper: Sendable {
 
                     AppLog.ffmpeg.info("ffmpeg \(arguments.joined(separator: " "), privacy: .public)")
                     try process.run()
-                    process.waitUntilExit()
 
-                    let stderrData = err.fileHandleForReading.readDataToEndOfFile()
-                    let stdoutData = out.fileHandleForReading.readDataToEndOfFile()
+                    // Drain pipes while ffmpeg runs — otherwise stderr progress fills the
+                    // ~64 KiB pipe buffer and deadlocks waitUntilExit (0% CPU forever).
+                    let group = DispatchGroup()
+                    var stdoutData = Data()
+                    var stderrData = Data()
+                    group.enter()
+                    DispatchQueue.global(qos: .utility).async {
+                        stdoutData = out.fileHandleForReading.readDataToEndOfFile()
+                        group.leave()
+                    }
+                    group.enter()
+                    DispatchQueue.global(qos: .utility).async {
+                        stderrData = err.fileHandleForReading.readDataToEndOfFile()
+                        group.leave()
+                    }
+
+                    process.waitUntilExit()
+                    group.wait()
+
                     let stderr = String(data: stderrData, encoding: .utf8) ?? ""
                     let stdout = String(data: stdoutData, encoding: .utf8) ?? ""
 
