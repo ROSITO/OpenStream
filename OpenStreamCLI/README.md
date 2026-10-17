@@ -68,6 +68,34 @@ rsync -az -e 'ssh -o BatchMode=yes' \
 
 Règle simple : **URL fichier média → `download`**. **URL page HTML → `fetch`**. **Page série/saison → `season`**.
 
+### NL agent (Intendant) — titres vs favoris
+
+Les favoris OpenStream sont souvent des **sites** (FS26, RizMov…), pas des titres de séries.
+
+| Message utilisateur | Parsing attendu | Action |
+|---------------------|-----------------|--------|
+| « Télécharge la saison de Tulsa King » | `show=Tulsa King`, mode=`season` — **pas** la phrase entière dans `--title` | Si pas de favori page → chercher sur le site favori (FS26) **ou** demander le lien page saison |
+| Lien `…/newsid=15112864` | page saison | `season <url> --show 'Tulsa King' --season 1` |
+
+Mauvaise commande (ne marche pas) :
+
+```bash
+# --title = phrase NL → matching favoris impossible
+openstream-cli season … --title 'Telecharge la saison de Tulsa King'
+```
+
+Bonne commande (validée live ollamac) :
+
+```bash
+# 1) résoudre via recherche FS26 → newsid saison 1
+# 2) lister / télécharger
+openstream-cli season 'https://fs26.lol/index.php?newsid=15112864' \
+  --json --show 'Tulsa King' --season 1
+```
+
+Message type si seul le titre est connu et absent des favoris :  
+*« Tulsa King n’est pas dans les favoris (sites : FS26, …). Envoie le lien page saison, ou je cherche sur FS26. »*
+
 ---
 
 ## Commandes
