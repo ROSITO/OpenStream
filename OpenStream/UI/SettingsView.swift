@@ -85,6 +85,16 @@ struct SettingsView: View {
                 .pickerStyle(.radioGroup)
             }
 
+            Section("Navigateur") {
+                Toggle("Bloquer les popups", isOn: $settings.blockPopups)
+                Toggle("Bloquer les publicités", isOn: $settings.blockAds)
+                Toggle("Confirmer les redirections automatiques", isOn: $settings.blockAutomaticRedirects)
+                Text("Popups : window.open / target=_blank. Pubs : liste embarquée. Redirections : JS ou meta-refresh après chargement — une alerte propose d’y aller ou de rester.")
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+                    .fixedSize(horizontal: false, vertical: true)
+            }
+
             Section("Automatisation") {
                 Toggle("Auto-télécharger HLS détectés", isOn: $settings.automation.autoEnqueueHLS)
                 Toggle("Auto-télécharger DASH détectés", isOn: $settings.automation.autoEnqueueDASH)
@@ -140,28 +150,34 @@ struct SettingsView: View {
 
             Section("FFmpeg") {
                 switch appState.ffmpegStatus {
-                case .ready(let path):
-                    Text("Binaire : \(path)")
+                case .readyBundled(let path):
+                    Text("Embarqué (indépendant de Homebrew)")
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                    Text(path)
+                        .font(.caption.monospaced())
+                        .textSelection(.enabled)
+                        .foregroundStyle(.secondary)
+                case .readySystem(let path):
+                    Label("Secours système (Homebrew/PATH) — fragile si brew d’upgrade", systemImage: "exclamationmark.triangle")
+                        .font(.caption)
+                        .foregroundStyle(.orange)
+                    Text(path)
                         .font(.caption.monospaced())
                         .textSelection(.enabled)
                         .foregroundStyle(.secondary)
                 case .missingFFmpeg:
-                    Text("FFmpeg introuvable. L’assemblage MP4 ne fonctionnera pas.")
+                    Text("FFmpeg embarqué absent. Lance ./scripts/fetch-bundled-ffmpeg.sh puis rebuild.")
                         .font(.caption)
                         .foregroundStyle(.secondary)
-                    Button(appState.ffmpegInstallInProgress ? "Installation…" : "Installer via Homebrew") {
+                    Button(appState.ffmpegInstallInProgress ? "Installation…" : "Secours : Homebrew") {
                         appState.installFFmpegWithBrew()
                     }
                     .disabled(appState.ffmpegInstallInProgress)
                 case .missingHomebrew:
-                    Text("Homebrew est requis pour installer FFmpeg automatiquement.")
+                    Text("FFmpeg embarqué absent et Homebrew introuvable. Fetch + rebuild requis.")
                         .font(.caption)
                         .foregroundStyle(.secondary)
-                    Button("Ouvrir brew.sh") {
-                        if let url = URL(string: "https://brew.sh") {
-                            NSWorkspace.shared.open(url)
-                        }
-                    }
                 }
                 if let log = appState.ffmpegInstallLog {
                     Text(log)

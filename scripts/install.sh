@@ -1,5 +1,6 @@
 #!/usr/bin/env bash
-# Installe OpenStream.app dans /Applications, FFmpeg via Homebrew, et lève la quarantaine Gatekeeper.
+# Installe OpenStream.app dans /Applications et lève la quarantaine Gatekeeper.
+# FFmpeg est embarqué dans le bundle (plus de dépendance Homebrew obligatoire).
 set -euo pipefail
 
 REPO="ROSITO/OpenStream"
@@ -10,20 +11,6 @@ need_cmd() { command -v "$1" >/dev/null 2>&1; }
 if [[ "$(uname -s)" != "Darwin" ]]; then
   echo "OpenStream est une app macOS." >&2
   exit 1
-fi
-
-if ! need_cmd brew; then
-  echo "Homebrew est requis pour FFmpeg." >&2
-  echo "Installez-le : https://brew.sh" >&2
-  echo '/bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"' >&2
-  exit 1
-fi
-
-if ! need_cmd ffmpeg; then
-  echo "→ Installation de FFmpeg…"
-  brew install ffmpeg
-else
-  echo "→ FFmpeg déjà présent : $(command -v ffmpeg)"
 fi
 
 if ! need_cmd curl || ! need_cmd python3; then
@@ -62,6 +49,13 @@ echo "→ Copie vers $DEST"
 rm -rf "$DEST"
 ditto "$APP" "$DEST"
 xattr -cr "$DEST" 2>/dev/null || true
+
+if [[ -x "$DEST/Contents/Resources/Helpers/ffmpeg" ]]; then
+  echo "→ FFmpeg embarqué : OK"
+  "$DEST/Contents/Resources/Helpers/ffmpeg" -version 2>&1 | head -1 || true
+else
+  echo "⚠ FFmpeg embarqué absent dans cette release — assemblage impossible jusqu’à mise à jour." >&2
+fi
 
 echo "OpenStream est dans Applications. Vous pouvez lancer :"
 echo "  open -a OpenStream"

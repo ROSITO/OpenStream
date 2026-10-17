@@ -7,6 +7,8 @@ import Observation
 final class DownloadManager {
     private(set) var jobs: [DownloadJob] = []
     private(set) var lastError: String?
+    private(set) var lastInfo: String?
+    private(set) var isRepairingSync = false
 
     private let queue: DownloadQueue
     private var updatesTask: Task<Void, Never>?
@@ -117,10 +119,14 @@ final class DownloadManager {
         }
     }
 
-    /// DASH : une piste audio seule est incluse automatiquement. HLS : pas d’auto (souvent muxé).
+    /// Inclut une piste audio externe si le flux en a (DASH toujours ; HLS démuxé type Lanterns).
+    /// Préférence : français (`fr`/`fra`/`fre`) > piste `DEFAULT` > première piste.
     static func defaultAudioTrack(for media: DetectedMedia) -> MediaTrack? {
-        guard media.kind == .dash, !media.audioTracks.isEmpty else { return nil }
-        return media.audioTracks.first(where: \.isDefault) ?? media.audioTracks.first
+        guard !media.audioTracks.isEmpty else { return nil }
+        if media.kind == .dash || media.kind == .hls {
+            return MediaTrack.preferredAudio(from: media.audioTracks)
+        }
+        return nil
     }
 
     func cancel(_ id: UUID) {
@@ -173,6 +179,58 @@ final class DownloadManager {
             } catch {
                 lastError = error.localizedDescription
             }
+        }
+    }
+
+    /// Corrige le décalage son/image d’un MP4 déjà exporté (bouton UI).
+    func repairAVSync(at url: URL) {
+        guard !isRepairingSync else { return }
+        isRepairingSync = true
+        lastError = nil
+        lastInfo = "Réparation sync…"
+        Task {
+            defer { isRepairingSync = false }
+            do {
+                let assembler = try MediaAssembler()
+                let result = try await assembler.repairAVSync(at: url)
+                lastInfo = result.userMessage
+                AppLog.ffmpeg.info("AV sync repair: \(result.userMessage, privacy: .public)")
+            } catch {
+                lastInfo = nil
+                lastError = error.localizedDescription
+            }
+        }
+    }
+
+    func repairAVSync(_ job: DownloadJob) {
+        guard let exportURL = job.exportURL,
+              FileManager.default.fileExists(atPath: exportURL.path)
+        else {
+            lastError = "MP4 introuvable pour ce téléchargement"
+            return
+        }
+        repairAVSync(at: exportURL)
+    }
+
+    /// Applique un décalage audio manuel (secondes ; + = retarder l’audio).
+    func applyManualAudioShift(at url: URL, audioShiftSeconds: Double) async throws -> AVSyncRepairResult {
+        isRepairingSync = true
+        lastError = nil
+        lastInfo = "Ajustement sync…"
+        defer { isRepairingSync = false }
+        do {
+            let assembler = try MediaAssembler()
+            let result = try await assembler.applyManualAudioShift(
+                at: url,
+                audioShiftSeconds: audioShiftSeconds
+            )
+            lastInfo = result.userMessage
+            AppLog.ffmpeg.info("AV sync manual: \(result.userMessage, privacy: .public)")
+            return result
+        } catch {
+            lastInfo = nil
+            lastError = error.localizedDescription
+            throw error
         }
     }
 

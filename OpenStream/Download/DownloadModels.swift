@@ -188,7 +188,7 @@ enum DownloadError: Error, LocalizedError, Sendable {
     case unsupportedKind
     case invalidPlaylist
     case emptyPlaylist
-    case httpStatus(Int)
+    case httpStatus(Int, retryAfterSeconds: Int? = nil)
     case message(String)
 
     var errorDescription: String? {
@@ -197,8 +197,26 @@ enum DownloadError: Error, LocalizedError, Sendable {
         case .unsupportedKind: return "Type de média non supporté pour le téléchargement"
         case .invalidPlaylist: return "Playlist HLS invalide"
         case .emptyPlaylist: return "Playlist HLS sans segments"
-        case .httpStatus(let code): return "HTTP \(code)"
+        case .httpStatus(let code, _): return "HTTP \(code)"
         case .message(let text): return text
+        }
+    }
+
+    /// Erreurs pour lesquelles une reprise automatique a du sens.
+    var isTransientNetworkFailure: Bool {
+        switch self {
+        case .httpStatus(let code, _):
+            return code == 429 || code == 503 || code == 502 || code == 504
+        case .message(let text):
+            let lower = text.lowercased()
+            return lower.contains("http 429")
+                || lower.contains("http 503")
+                || lower.contains("429")
+                || lower.contains("timed out")
+                || lower.contains("timeout")
+                || lower.contains("segment(s) en échec")
+        default:
+            return false
         }
     }
 }
@@ -211,7 +229,7 @@ extension DownloadError: Equatable {
              (.invalidPlaylist, .invalidPlaylist),
              (.emptyPlaylist, .emptyPlaylist):
             return true
-        case (.httpStatus(let a), .httpStatus(let b)):
+        case (.httpStatus(let a, _), .httpStatus(let b, _)):
             return a == b
         case (.message(let a), .message(let b)):
             return a == b

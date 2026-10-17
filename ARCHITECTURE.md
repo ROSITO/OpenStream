@@ -46,6 +46,14 @@ Browser        Session            Preferences
 
 Flux de données principal : **navigation → observation réseau → détection → parse manifeste → file de téléchargement → assemblage → export → historique**.
 
+Chemin agent (sans UI) :
+
+```
+openstream-cli → OpenStreamCore (fetch/season/download)
+              → parsers / DownloadQueue / FFmpeg Helpers
+              → JSON Lines (stdout) + exit code
+```
+
 ---
 
 ## Principes
@@ -133,7 +141,14 @@ Flux de données principal : **navigation → observation réseau → détection
 ### Productivity (Phase 8)
 - **Batch :** sheet multi-URLs — médias enfilés, pages ouvertes en séquence.
 - **Automation :** toggles réglages auto-enqueue par `ManifestKind`.
-- **CLI :** outil `openstream-cli` → `Application Support/OpenStream/inbox/` ; `LocalCommandServer` dans l’app.
+- **CLI headless (D018) :** target `OpenStreamCLI` + façade `OpenStreamCore/`
+  - `download` / `fetch` / `season` / `status` / `wait` / `cancel`
+  - JSON Lines stdout (`AgentEvent`) + exit codes — contrat : `OpenStreamCLI/README.md`
+  - `HeadlessBrowserSession` (WKWebView offscreen) pour détection page + titres
+  - `EpisodeEnumerator` : catalogue French Stream `/data/eps_{newsid}.txt`, pattern MOVIX `/tv/{id}/s/{S}/e/{E}`, liens DOM
+  - FFmpeg via `Helpers/` à côté du binaire (même stratégie D017)
+  - DB jobs : `Application Support/OpenStream/cli-store/` (`--shared-db` pour l’app)
+  - Pont GUI optionnel : inbox + `LocalCommandServer` (`--via-app`)
 
 ### Logging
 - **Rôle :** `os.Logger`, catégories par module (`browser`, `network`, `hls`, `download`, `ffmpeg`).

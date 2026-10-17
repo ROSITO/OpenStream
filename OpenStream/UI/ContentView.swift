@@ -103,6 +103,9 @@ struct ContentView: View {
             .sheet(isPresented: $appState.showBatchSheet) {
                 BatchSheet()
             }
+            .sheet(item: $appState.avSyncTarget) { target in
+                AVSyncSheet(target: target)
+            }
         }
     }
 }
@@ -164,9 +167,7 @@ struct MediaDownloadSheet: View {
         self.onConfirm = onConfirm
         self.onCancel = onCancel
         _selectedVariantID = State(initialValue: media.preferredVariantID ?? media.variants.first?.id)
-        let defaultAudio = media.audioTracks.first(where: \.isDefault)
-            ?? (media.kind == .dash ? media.audioTracks.first : nil)
-            ?? (media.audioTracks.count == 1 ? media.audioTracks.first : nil)
+        let defaultAudio = MediaTrack.preferredAudio(from: media.audioTracks)
         _selectedAudioID = State(initialValue: defaultAudio?.id)
         _selectedSubtitleID = State(initialValue: media.subtitleTracks.first?.id)
         _includeSubtitle = State(initialValue: false)
@@ -397,6 +398,20 @@ struct BrowserPane: View {
                     .padding(.horizontal, 12)
                     .padding(.vertical, 6)
                     .background(.quaternary.opacity(0.5))
+            }
+        }
+        .alert(
+            "Redirection bloquée",
+            isPresented: Binding(
+                get: { browser.pendingRedirectURL != nil },
+                set: { if !$0 { browser.cancelPendingRedirect() } }
+            )
+        ) {
+            Button("Y aller") { browser.confirmPendingRedirect() }
+            Button("Rester ici", role: .cancel) { browser.cancelPendingRedirect() }
+        } message: {
+            if let url = browser.pendingRedirectURL {
+                Text("La page veut t’envoyer vers :\n\(url.absoluteString)")
             }
         }
     }
@@ -779,6 +794,11 @@ struct DownloadsPanel: View {
                     .font(.caption)
                     .foregroundStyle(.red)
                     .padding(.horizontal, 12)
+            } else if let info = appState.downloadManager.lastInfo {
+                Text(info)
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+                    .padding(.horizontal, 12)
             }
 
             if appState.downloadManager.jobs.isEmpty {
@@ -849,6 +869,15 @@ struct DownloadJobRow: View {
         case .completed:
             Button("MP4") { appState.downloadManager.reveal(job) }
                 .font(.caption)
+            if let exportURL = job.exportURL,
+               FileManager.default.fileExists(atPath: exportURL.path)
+            {
+                Button("Sync…") {
+                    appState.avSyncTarget = AVSyncTarget(url: exportURL, title: job.title)
+                }
+                .font(.caption)
+                .disabled(appState.downloadManager.isRepairingSync)
+            }
             Button("Supprimer") { appState.downloadManager.remove(job.id) }
                 .font(.caption)
         }

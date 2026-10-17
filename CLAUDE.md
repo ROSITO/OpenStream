@@ -18,6 +18,8 @@ Documents de référence (lire dans cet ordre) :
 2. `ARCHITECTURE.md` — modules, frontières, contrats
 3. `ROADMAP.md` — phases et critères de done
 4. `MEMORY.md` — décisions figées et pièges connus
+5. `OpenStreamCLI/README.md` — contrat agent (`openstream-cli` JSON Lines / `season` / exit codes)
+6. `README.md` — install / build public
 
 ---
 
@@ -47,7 +49,7 @@ Documents de référence (lire dans cet ordre) :
 
 ### Git / fichiers
 
-- Ne pas committer de secrets, clés API, binaires FFmpeg précompilés volumineux sans stratégie documentée.
+- Ne pas committer de secrets, clés API, binaires FFmpeg précompilés volumineux : utiliser `scripts/fetch-bundled-ffmpeg.sh` → `OpenStream/Resources/Helpers/` (gitignorés).
 - Ne pas créer de docs markdown non demandés.
 - Commits uniquement sur demande explicite de l'utilisateur.
 

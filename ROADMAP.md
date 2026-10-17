@@ -162,6 +162,21 @@ Références : `PRD_OpenStream.md`, `ARCHITECTURE.md`, `MEMORY.md`, `CLAUDE.md`.
 **Done quand :** un utilisateur power-user peut enchaîner plusieurs téléchargements et rejouer l'historique.  
 **Statut :** ✅ livré 2026-07-29
 
+### Phase 8b — CLI headless / agent (D018)
+
+**Objectif :** même pipeline download/assemble **sans** GUI, consommable par un agent IA.
+
+- [x] Target `OpenStreamCLI` + `OpenStreamCore` (queue, parsers, FFmpeg Helpers)
+- [x] Commandes `download` / `fetch` / `status` / `wait` / `cancel` + JSON Lines
+- [x] `fetch` WKWebView offscreen + titres (`PageTitleResolver`)
+- [x] `season` : catalogue FS `eps_*.txt` / pattern MOVIX / DOM ; `--auto-download` séquentiel
+- [x] Préférence variante HLS vidéo vs audio-only ; export série Jellyfin
+- [x] Playbook agent : `OpenStreamCLI/README.md`
+- [x] FFmpeg embarqué (D017) partagé app + CLI
+
+**Done quand :** un agent peut lister une saison et télécharger un épisode en JSON Lines sans ouvrir l’app.  
+**Statut :** ✅ livré 2026-10-17
+
 ---
 
 ## Phase 9 — Gate DRM (release open source publique)

@@ -21,12 +21,18 @@ targets:
           - Resources/AppIcon.iconset/**
           - Resources/AppIcon.icns
           - Resources/AppIcon-1024.png
+          - Resources/Helpers/**
+      - path: OpenStreamCore/EpisodeEnumerator.swift
+      - path: OpenStream/Resources/Helpers
+        type: folder
+        buildPhase: resources
+        optional: true
     settings:
       base:
         PRODUCT_BUNDLE_IDENTIFIER: app.openstream.OpenStream
         PRODUCT_NAME: OpenStream
-        MARKETING_VERSION: "0.1.1"
-        CURRENT_PROJECT_VERSION: "2"
+        MARKETING_VERSION: "0.1.17"
+        CURRENT_PROJECT_VERSION: "18"
         GENERATE_INFOPLIST_FILE: YES
         INFOPLIST_KEY_CFBundleDisplayName: OpenStream
         INFOPLIST_KEY_LSApplicationCategoryType: public.app-category.utilities
@@ -48,6 +54,46 @@ targets:
       - path: OpenStreamCLI
         excludes:
           - README.md
+      - path: OpenStreamCore
+      # Pipeline headless partagé (même sources que l’app, module CLI).
+      - path: OpenStream/Core/Logging
+      - path: OpenStream/Core/Models
+      - path: OpenStream/Core/Export
+      - path: OpenStream/Core/Preferences/SettingsCore.swift
+      - path: OpenStream/Download
+        excludes:
+          - DownloadManager.swift
+      - path: OpenStream/FFmpeg
+      - path: OpenStream/Media
+      - path: OpenStream/Network
+      - path: OpenStream/Plugins
+      - path: OpenStream/Session/CookieBridge.swift
+      - path: OpenStream/Browser/WeakScriptMessageHandler.swift
+      - path: OpenStream/Browser/PageTitleResolver.swift
+    copyFiles:
+      - path: OpenStream/Resources/Helpers/ffmpeg
+        destination: executables
+        optional: true
+      - path: OpenStream/Resources/Helpers/ffprobe
+        destination: executables
+        optional: true
+    postCompileScripts:
+      - name: Ensure CLI FFmpeg Helpers
+        basedOnDependencyAnalysis: false
+        script: |
+          set -e
+          DEST="${BUILT_PRODUCTS_DIR}"
+          HELPERS_SRC="${SRCROOT}/OpenStream/Resources/Helpers"
+          if [[ -x "${HELPERS_SRC}/ffmpeg" ]]; then
+            mkdir -p "${DEST}/Helpers"
+            cp -f "${HELPERS_SRC}/ffmpeg" "${DEST}/Helpers/ffmpeg"
+            cp -f "${HELPERS_SRC}/ffprobe" "${DEST}/Helpers/ffprobe"
+            chmod +x "${DEST}/Helpers/ffmpeg" "${DEST}/Helpers/ffprobe"
+            # Aussi à plat à côté du binaire (fallback résolution).
+            cp -f "${HELPERS_SRC}/ffmpeg" "${DEST}/ffmpeg"
+            cp -f "${HELPERS_SRC}/ffprobe" "${DEST}/ffprobe"
+            chmod +x "${DEST}/ffmpeg" "${DEST}/ffprobe"
+          fi
     settings:
       base:
         PRODUCT_BUNDLE_IDENTIFIER: app.openstream.OpenStreamCLI
@@ -56,6 +102,7 @@ targets:
         MACOSX_DEPLOYMENT_TARGET: "14.0"
         CODE_SIGN_IDENTITY: "-"
         GENERATE_INFOPLIST_FILE: YES
+        LD_RUNPATH_SEARCH_PATHS: "$(inherited) @executable_path"
     scheme: {}
   OpenStreamTests:
     type: bundle.unit-test

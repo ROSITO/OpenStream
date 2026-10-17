@@ -7,26 +7,30 @@ enum FFmpegSetupError: Error, LocalizedError, Sendable {
     var errorDescription: String? {
         switch self {
         case .brewNotFound:
-            return "Homebrew introuvable. Installez-le depuis https://brew.sh puis réessayez."
+            return "Homebrew introuvable. Préfère le FFmpeg embarqué (scripts/fetch-bundled-ffmpeg.sh)."
         case .installFailed(let text):
             return text
         }
     }
 }
 
-/// Détection / installation de FFmpeg via Homebrew (binaire externe, pas de liaison).
+/// Détection FFmpeg : Helpers embarqués d’abord, Homebrew uniquement en secours.
 enum FFmpegSetup: Sendable {
     enum Status: Equatable, Sendable {
-        case ready(path: String)
+        case readyBundled(path: String)
+        case readySystem(path: String)
         case missingFFmpeg
         case missingHomebrew
     }
 
     static func status() -> Status {
-        if let path = FFmpegWrapper.resolveBinary()?.path {
-            return .ready(path: path)
+        guard let path = FFmpegWrapper.resolveBinary()?.path else {
+            return brewURL == nil ? .missingHomebrew : .missingFFmpeg
         }
-        return brewURL == nil ? .missingHomebrew : .missingFFmpeg
+        if FFmpegWrapper.isUsingBundledBinary() {
+            return .readyBundled(path: path)
+        }
+        return .readySystem(path: path)
     }
 
     static var brewURL: URL? {
@@ -39,6 +43,7 @@ enum FFmpegSetup: Sendable {
             .map { URL(fileURLWithPath: $0) }
     }
 
+    /// Secours uniquement — le chemin nominal est le binaire embarqué.
     static func installFFmpeg() async throws {
         guard let brew = brewURL else {
             throw FFmpegSetupError.brewNotFound

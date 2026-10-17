@@ -23,6 +23,8 @@ final class AppState {
     var showBookmarkManager: Bool = false
     var showHistory: Bool = false
     var showBatchSheet: Bool = false
+    /// Feuille d’ajustement sync A/V manuel.
+    var avSyncTarget: AVSyncTarget?
     var ffmpegStatus: FFmpegSetup.Status = .missingFFmpeg
     var ffmpegInstallInProgress = false
     var ffmpegInstallLog: String?
@@ -71,6 +73,11 @@ final class AppState {
             guard let self else { return }
             self.cookieBridge.attach(to: webView)
             self.networkObserver.attachScriptMessaging(to: webView)
+            self.browser.applyBlockingPreferences(
+                blockPopups: self.settings.blockPopups,
+                blockAds: self.settings.blockAds,
+                blockAutomaticRedirects: self.settings.blockAutomaticRedirects
+            )
         }
         browser.onPageTitleChange = { [weak self] title in
             self?.mediaCatalog.refreshSuggestedTitles(using: title)
@@ -102,6 +109,11 @@ final class AppState {
         settings.applyNetworkAndPaths()
         mediaCatalog.updateSession(settings.urlSession)
         vpnMonitor.filter = settings.vpnIndicatorFilter
+        browser.applyBlockingPreferences(
+            blockPopups: settings.blockPopups,
+            blockAds: settings.blockAds,
+            blockAutomaticRedirects: settings.blockAutomaticRedirects
+        )
         vpnMonitor.start()
         let activeIDs = Set(downloadManager.jobs.map(\.id))
         let removed = settings.cleanupOrphanParts(excludingJobIDs: activeIDs)
@@ -115,8 +127,11 @@ final class AppState {
 
     func refreshFFmpegStatus() {
         ffmpegStatus = FFmpegSetup.status()
-        if case .ready = ffmpegStatus {
+        switch ffmpegStatus {
+        case .readyBundled, .readySystem:
             ffmpegInstallLog = nil
+        case .missingFFmpeg, .missingHomebrew:
+            break
         }
     }
 
@@ -141,6 +156,11 @@ final class AppState {
         mediaCatalog.updateSession(settings.urlSession)
         vpnMonitor.filter = settings.vpnIndicatorFilter
         vpnMonitor.refresh()
+        browser.applyBlockingPreferences(
+            blockPopups: settings.blockPopups,
+            blockAds: settings.blockAds,
+            blockAutomaticRedirects: settings.blockAutomaticRedirects
+        )
     }
 
     var candidates: [NetworkMediaCandidate] {

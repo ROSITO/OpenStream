@@ -19,15 +19,32 @@ struct HistorySheet: View {
                         description: Text("Les téléchargements terminés ou en échec apparaîtront ici.")
                     )
                 } else {
-                    List {
-                        ForEach(filtered) { record in
-                            HistoryRow(record: record)
+                    VStack(spacing: 0) {
+                        if let error = appState.downloadManager.lastError {
+                            Text(error)
+                                .font(.caption)
+                                .foregroundStyle(.red)
+                                .frame(maxWidth: .infinity, alignment: .leading)
+                                .padding(.horizontal, 16)
+                                .padding(.vertical, 8)
+                        } else if let info = appState.downloadManager.lastInfo {
+                            Text(info)
+                                .font(.caption)
+                                .foregroundStyle(.secondary)
+                                .frame(maxWidth: .infinity, alignment: .leading)
+                                .padding(.horizontal, 16)
+                                .padding(.vertical, 8)
                         }
-                        .onDelete { indexSet in
-                            let snapshot = filtered
-                            for index in indexSet {
-                                guard snapshot.indices.contains(index) else { continue }
-                                appState.history.remove(id: snapshot[index].id)
+                        List {
+                            ForEach(filtered) { record in
+                                HistoryRow(record: record)
+                            }
+                            .onDelete { indexSet in
+                                let snapshot = filtered
+                                for index in indexSet {
+                                    guard snapshot.indices.contains(index) else { continue }
+                                    appState.history.remove(id: snapshot[index].id)
+                                }
                             }
                         }
                     }
@@ -92,12 +109,24 @@ private struct HistoryRow: View {
                     }
                     .buttonStyle(.borderless)
                     .font(.caption)
+                    Button("Sync…") {
+                        appState.avSyncTarget = AVSyncTarget(url: export, title: record.title)
+                    }
+                    .buttonStyle(.borderless)
+                    .font(.caption)
+                    .disabled(appState.downloadManager.isRepairingSync)
                 }
             }
         }
         .padding(.vertical, 4)
         .contextMenu {
             Button("Re-télécharger") { appState.redownload(from: record) }
+            if let export = record.exportURL, FileManager.default.fileExists(atPath: export.path) {
+                Button("Ajuster sync…") {
+                    appState.avSyncTarget = AVSyncTarget(url: export, title: record.title)
+                }
+                .disabled(appState.downloadManager.isRepairingSync)
+            }
             Button("Copier l’URL source") {
                 NSPasteboard.general.clearContents()
                 NSPasteboard.general.setString(record.sourceURL.absoluteString, forType: .string)

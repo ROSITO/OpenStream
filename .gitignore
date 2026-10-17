@@ -1,5 +1,6 @@
 # macOS / Xcode
 .DS_Store
+**/.DS_Store
 *.swp
 *~
 
@@ -36,10 +37,13 @@ Carthage/Build/
 Secrets/
 Config/Local.xcconfig
 
-# FFmpeg binaires locaux / artifacts
+# FFmpeg binaires locaux / artifacts (fetch via scripts/fetch-bundled-ffmpeg.sh)
 Tools/ffmpeg*
 Vendor/FFmpeg/**/*.a
 Vendor/FFmpeg/**/*.dylib
+Vendor/ffmpeg/VERSION
+OpenStream/Resources/Helpers/ffmpeg
+OpenStream/Resources/Helpers/ffprobe
 *.xcframework/
 
 # App exports / downloads de test

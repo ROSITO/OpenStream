@@ -58,6 +58,28 @@ struct MediaTrack: Identifiable, Sendable, Hashable, Codable {
         if isDefault { parts.append("défaut") }
         return parts.joined(separator: " · ")
     }
+
+    /// Français d’abord, sinon piste DEFAULT, sinon première.
+    static func preferredAudio(from tracks: [MediaTrack]) -> MediaTrack? {
+        guard !tracks.isEmpty else { return nil }
+        let frenchCodes: Set<String> = ["fr", "fra", "fre", "fr-fr", "fr_fr"]
+        if let french = tracks.first(where: { track in
+            let lang = (track.language ?? "").lowercased().replacingOccurrences(of: "_", with: "-")
+            let name = (track.name ?? "").lowercased()
+            return frenchCodes.contains(lang)
+                || lang.hasPrefix("fr-")
+                || name.contains("français")
+                || name.contains("francais")
+                || name == "french"
+                || name.contains(" french")
+                || name.hasPrefix("fr ")
+                || name == "fr"
+                || name.hasPrefix("fra")
+        }) {
+            return french
+        }
+        return tracks.first(where: \.isDefault) ?? tracks.first
+    }
 }
 
 struct MediaVariant: Identifiable, Sendable, Hashable {

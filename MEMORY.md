@@ -73,18 +73,64 @@ Mémoire projet : décisions figées, contraintes, et pièges.
 **Décision provisoire :** pas de fichier `LICENSE` tant que MIT vs GPLv3 n’est pas tranché. FFmpeg reste un binaire externe (LGPL) invoqué par Process — pas de linking statique (compatible avec MIT ou GPL côté app, selon distribution du binaire).  
 **Date :** 2026-07-29
 
-**Décision :** pour le MVP/test, FFmpeg est invoqué via `Process` (`/opt/homebrew/bin/ffmpeg` ou PATH), pas de liaison libavformat/libavcodec. Remux `-c copy` + concat demuxer pour HLS MPEG-TS ; fallback sans `aac_adtstoasc`.  
+**Décision (amendée D017) :** FFmpeg invoqué via `Process`, pas de liaison libav*. Binaire **embarqué** dans le bundle (`Helpers/`) en priorité ; Homebrew/PATH seulement si Helpers absents. Remux `-c copy` + playlist HLS locales.  
 **Stockage :** segments temporaires dans `~/Downloads/OpenStream/.parts/<jobId>/`, MP4 final dans `~/Downloads/OpenStream/`, **segments supprimés après assemblage réussi**. Pas de dossier Exports séparé.  
-**Pourquoi :** simplicité, compatibilité LGPL plus simple (pas de linking statique). XCFramework embarqué possible plus tard.  
-**Date :** 2026-07-29
+**Pourquoi :** simplicité LGPL + isolation de l’environnement système.  
+**Date :** 2026-07-29 / amendé 2026-10-17
 
+### D013 — Alignement A/V au mux
+**Décision (amendée 5×) :**
+- **Tout HLS MPEG-TS** (muxé ou démuxé) : remux via `playlist.m3u8` locaux (EXTINF). **Jamais** `-f concat` sur les `.ts` — étire les PTS ~+1,5 % (S01E05) ou drop des frames (audio séparé).
+- **HLS démuxé** : un `ffmpeg` sur vidéo+audio `playlist.m3u8` **avec `-copyts`** (sans `-start_at_zero`). Les renditions partagent souvent une timeline MPEG ; si l’audio démarre plus tard (GoT FR seg1 @ +1,85 s), remettre A et V à 0 indépendamment avance tout le son — sync OK dans le player HLS, cassé dans le MP4.
+- **DASH fMP4** : concat binaire brut + mux `-copyts`/`-start_at_zero` ; post `itsscale`/`atempo` seulement si skew résiduel.
+**Date :** 2026-09-30
+
+### D014 — Bloqueur popups + pubs (navigateur)
+**Décision :** `WKUIDelegate` bloque `window.open` / popups (liens `target=_blank` ouverts dans la même fenêtre) ; `WKContentRuleList` embarqué (`adblock-rules.json`) pour pubs/trackers courants. Réglages **Paramètres → Navigateur**, défaut ON. Ne pas bloquer les CDN média / antibot (PerimeterX, GTM) pour ne pas casser les players.  
+**Amendement :** redirections automatiques (JS / meta après `didFinish`) → alerte « Y aller / Rester ici » (`blockAutomaticRedirects`, défaut ON). Chaîne HTTP 30x d’un chargement utilisateur autorisée jusqu’à fin de navigation.  
+**Date :** 2026-10-01
+
+### D015 — Auto-retry réseau (comportement par défaut)
+**Décision :** un échec 429/502/503/504 (ou « segments en échec » après retries) **ne marque plus le job en failed définitif** d’emblée.  
+1. Retry segment avec backoff + `Retry-After`  
+2. Si le batch échoue encore → job repasse en `queued` avec cooldown (15s…3 min), jusqu’à 12 reprises auto  
+3. Au bootstrap, les jobs `failed` à message transient sont re-queueés  
+La relance manuelle reste disponible ; elle ne doit plus être le chemin nominal.  
+**Date :** 2026-10-01
+
+### D016 — MP4 progressif = stream disque
+**Décision :** le téléchargement d’unités (dont MP4 progressif) utilise `URLSession.download(for:)` (fichier temp), jamais `data(for:)` qui charge tout en RAM. La normalisation leurre PNG→TS ne s’applique qu’aux petits segments HLS/CDN (≤32 Mo, extensions segment/leurre).  
+**Date :** 2026-10-05
+
+### D017 — FFmpeg embarqué (plus de dépendance Homebrew)
+**Décision :** OpenStream shippe ses propres `ffmpeg` / `ffprobe` **statiques** (universal arm64+x86_64) dans `Contents/Resources/Helpers/`.  
+- Fetch : `scripts/fetch-bundled-ffmpeg.sh` (source https://ffmpeg.martin-riedl.de/ release)  
+- Résolution : **bundle d’abord**, puis `OPENSTREAM_FFMPEG`, puis Homebrew/PATH en secours uniquement  
+- Les binaires ne sont pas dans git (poids) ; le script + `Vendor/ffmpeg/README.md` documentent la procédure  
+- Toujours invoqué via `Process` (pas de linking libav*) — compatible D005 / licence app encore ouverte  
+**Pourquoi :** un `brew upgrade` (ex. x265 soname) cassait tous les assemblages ; inacceptable.  
+**Date :** 2026-10-17  
+**Amende :** D010 / case « Distribution FFmpeg : Homebrew only » — Homebrew n’est plus le chemin nominal.
+
+### D018 — CLI headless / agent
+**Décision :** `openstream-cli` exécute download/assemble **sans** l’app GUI.  
+- Sources pipeline partagées compilées dans le target CLI + façade `OpenStreamCore/` (`HeadlessDownloadService`, `HeadlessBrowserSession`, JSON agent)  
+- Prefs runtime : `SettingsCore.swift` (`AppPreferences` snapshot) ; UI AppKit reste dans `AppSettings`  
+- DB dédiée `Application Support/OpenStream/cli-store/` (flag `--shared-db` pour partager l’app)  
+- Contrat agent : JSON Lines stdout + exit codes documentés dans `OpenStreamCLI/README.md` (playbook agent)  
+- Phase B : `fetch` via WKWebView offscreen (`NSApplication` accessory) ; titres via `PageTitleResolver` (`--title` prioritaire)  
+- `season` : énumération (1) catalogue FS `/data/eps_{newsid}.txt` préf. vidzy, (2) pattern `/tv/{id}/s/{S}/e/{E}`, (3) DOM ; défaut list-only ; `--auto-download` séquentiel + export Jellyfin série ; pick HLS vidéo vs `index-a1`  
+- Install agent ollamac : `~/.local/opt/openstream-cli/` + symlink `~/.local/bin/openstream-cli` (user `rosito`) ; exports défaut `~/Downloads/OpenStream`  
+
+- Inbox `--via-app` conservée comme pont optionnel vers la GUI  
+**Date :** 2026-10-17
 
 ---
 
 ## Ouvert / à trancher
 
 - [ ] Licence MIT vs GPLv3 (impact si FFmpeg lié dynamiquement vs statiquement — vérifier compatibilité LGPL FFmpeg)
-- [x] Distribution FFmpeg : Homebrew (script `scripts/install.sh` + bouton in-app) ; pas de binaire embarqué
+- [x] Distribution FFmpeg : **embarqué** (`Helpers/`, fetch script) — Homebrew secours seulement (D017)
 - [ ] Bundle identifier — **tranché :** `app.openstream.OpenStream` (D009)
 - [ ] Stratégie App Sandbox + entitlements réseau / downloads folder — **sandbox ON** (network client + downloads + user-selected R/W) ; à valider en usage réel
 - [ ] Format d'export MVP : MP4 uniquement, ou MKV aussi
@@ -110,6 +156,7 @@ Mémoire projet : décisions figées, contraintes, et pièges.
 ### FFmpeg
 - Remux (copy) vs re-encode : préférer remux (`-c copy`) quand les codecs sont compatibles conteneur.
 - Chemins avec espaces / Unicode : toujours passer des URL file ou arguments correctement quotés via Process API typé, pas de shell string.
+- **Sync A/V (DASH / pistes séparées)** : préserver la timeline Period (`-copyts` à l’assemblage + mux, `-start_at_zero` une fois). Ne pas appliquer `make_zero`/`genpts`/`itsoffset`/`atempo` séparément sur A et V. Fichiers déjà exportés avec dérive non linéaire : re-télécharger.
 
 ### Concurrency
 - La download queue et le network observer sont des candidats naturels à `actor`.
@@ -135,3 +182,27 @@ Mémoire projet : décisions figées, contraintes, et pièges.
 | 2026-07-29 | Nomenclature export configurable (Jellyfin film/série + custom) + titre/année au download |
 | 2026-07-29 | Download : fenêtre glissante segments + réglage concurrence (défaut 8, max 16) |
 | 2026-08-17 | Dépôt public + release v0.1.0 ; install.sh + setup FFmpeg in-app via Homebrew |
+| 2026-09-08 | Fix sync A/V au mux (genpts / avoid_negative_ts + fallback aresample) — cas Lanterns |
+| 2026-09-08 | UI « Réparer sync » (téléchargements + historique) pour MP4 déjà exportés |
+| 2026-09-08 | Feuille « Ajuster sync » : décalage audio manuel ±2 s (cas ~1 s restant) |
+| 2026-09-08 | Sync dérive : étirement audio (atempo) pour coller à la durée vidéo |
+| 2026-09-08 | Garde-fou : refus export si |durée A−V| > 1 s (segments incomplets) ; Sync UI avertit |
+| 2026-09-08 | Mux type lecteur : align PTS + `-t min(A,V)` ; bouton « Recaler comme le lecteur » |
+| 2026-09-08 | D013 amendé : `-copyts` / timeline Period ; atempo post-hoc insuffisant si dérive non linéaire |
+| 2026-09-08 | D013 v3 : concat fMP4 brut (pas de remux intermédiaire) + itsscale/atempo si skew ; fix r=-1 |
+| 2026-09-08 | D013 v4 : Lanterns = HLS TS démuxé ; mux via playlist.m3u8 locaux (concat TS cassait le sync) |
+| 2026-09-08 | Validé utilisateur : S01E04-10.mp4 sync A/V parfait (mux m3u8 locaux) |
+| 2026-10-01 | D014 : bloqueur popups (WKUIDelegate) + adblock (WKContentRuleList) ; toggles Paramètres |
+| 2026-10-01 | D015 : auto-retry job 429/503 (cooldown + bootstrap) — relance manuelle plus le chemin nominal |
+| 2026-10-05 | D016 : MP4 progressif via URLSession.download (plus de data(for:) en RAM) |
+| 2026-10-17 | D017 : FFmpeg statique embarqué (Helpers) — plus de casse via brew/x265 |
+| 2026-10-17 | D018 : openstream-cli headless (download/fetch/JSON agent) |
+| 2026-10-17 | D018+ : `season` (FS eps_*.txt / MOVIX / DOM) ; pick HLS vidéo ; deploy ollamac ; doc agent |
+| 2026-10-01 | Segments HLS « .image » : faux en-tête PNG devant MPEG-TS (TikTok CDN) — strip + rename .ts avant FFmpeg |
+| 2026-10-01 | Bug suite : download renommait en `.ts` mais playlist gardait `.image` — reconcile URIs avant mux |
+| 2026-10-01 | Fix assemble .image : planifier déjà en `.ts`, réécrire playlist depuis fichiers réels, re-DL si segments manquants |
+
+
+
+
+

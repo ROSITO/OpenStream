@@ -11,6 +11,11 @@ actor DownloadQueue {
     private var runningTasks: [UUID: Task<Void, Never>] = [:]
     private var cancellationFlags: [UUID: Bool] = [:]
     private var runningCount = 0
+    /// Reprises auto après 429/503 (par job).
+    private var autoRetryCounts: [UUID: Int] = [:]
+    /// Jobs en cooldown : `pump` ne les reprend pas avant cette date.
+    private var retryAvailableAt: [UUID: Date] = [:]
+    private static let maxAutoRetries = 12
 
     private var continuations: [UUID: AsyncStream<DownloadJob>.Continuation] = [:]
 
@@ -38,6 +43,14 @@ actor DownloadQueue {
                 job.state = .queued
                 job.updatedAt = Date()
                 try store.upsert(job)
+            case .failed(let message):
+                // Relance auto au démarrage si l’échec ressemble à du rate-limit / réseau.
+                if Self.looksTransientFailure(message) {
+                    AppLog.download.info("Bootstrap auto-retry for \(job.title, privacy: .public)")
+                    job.state = .queued
+                    job.updatedAt = Date()
+                    try store.upsert(job)
+                }
             default:
                 break
             }
@@ -48,6 +61,18 @@ actor DownloadQueue {
         }
         pump()
         return jobOrder.compactMap { jobs[$0] }
+    }
+
+    private static func looksTransientFailure(_ message: String) -> Bool {
+        let lower = message.lowercased()
+        return lower.contains("429")
+            || lower.contains("503")
+            || lower.contains("502")
+            || lower.contains("504")
+            || lower.contains("timed out")
+            || lower.contains("timeout")
+            || lower.contains("segment(s) en échec")
+            || lower.contains("reprends le téléchargement")
     }
 
     func jobsSnapshot() -> [DownloadJob] {
@@ -71,6 +96,8 @@ actor DownloadQueue {
 
     func cancel(id: UUID) async {
         cancellationFlags[id] = true
+        retryAvailableAt[id] = nil
+        autoRetryCounts[id] = 0
         runningTasks[id]?.cancel()
         if var job = jobs[id], !job.state.isTerminal {
             job.state = .cancelled
@@ -95,6 +122,7 @@ actor DownloadQueue {
             return
         }
         cancellationFlags[id] = false
+        retryAvailableAt[id] = nil
         job.state = .queued
         job.updatedAt = Date()
         jobs[id] = job
@@ -107,6 +135,8 @@ actor DownloadQueue {
         let partsDir = AppPreferences.partsDirectory(forJobID: id)
         let destination = jobs[id]?.destinationDirectory
         cancellationFlags[id] = true
+        retryAvailableAt[id] = nil
+        autoRetryCounts[id] = 0
         runningTasks[id]?.cancel()
         if runningTasks[id] != nil {
             runningTasks[id] = nil
@@ -169,16 +199,19 @@ actor DownloadQueue {
     }
 
     private func pump() {
+        let now = Date()
         let maxJobs = max(1, AppPreferences.current.maxConcurrentJobs)
         while runningCount < maxJobs {
             guard let nextID = jobOrder.first(where: { id in
                 guard let job = jobs[id], runningTasks[id] == nil else { return false }
+                if let until = retryAvailableAt[id], until > now { return false }
                 if case .queued = job.state { return true }
                 return false
             }) else {
                 return
             }
 
+            retryAvailableAt[nextID] = nil
             runningCount += 1
             let task = Task { [weak self] in
                 await self?.runJob(id: nextID)
@@ -218,7 +251,25 @@ actor DownloadQueue {
             try FileManager.default.createDirectory(at: job.destinationDirectory, withIntermediateDirectories: true)
 
             let units = try await planUnits(for: job)
-            let alreadyDone = Set(job.completedUnitIndices)
+            var alreadyDone = Set(job.completedUnitIndices)
+            // Indices « complétés » mais fichiers absents (échec assemble précédent) → re-télécharger.
+            if !alreadyDone.isEmpty {
+                let missing = units.filter { unit in
+                    alreadyDone.contains(unit.index)
+                        && !segmentFileExists(unit: unit, in: job.destinationDirectory)
+                }
+                if !missing.isEmpty {
+                    AppLog.download.info(
+                        "Re-download \(missing.count, privacy: .public) missing segment(s) before assemble"
+                    )
+                    for unit in missing {
+                        alreadyDone.remove(unit.index)
+                    }
+                    job.completedUnitIndices = alreadyDone.sorted()
+                    jobs[id] = job
+                    try? store.upsert(job)
+                }
+            }
             let pending = units.filter { !alreadyDone.contains($0.index) }
 
             if pending.isEmpty, !units.isEmpty {
@@ -239,6 +290,7 @@ actor DownloadQueue {
             jobs[id] = finished
             try await finalizeWithAssembly(jobID: id)
             AppLog.download.info("Job completed \(finished.title, privacy: .public)")
+            autoRetryCounts[id] = 0
         } catch is CancellationError {
             await markCancelled(id: id)
         } catch let error as DownloadError where error == .cancelled {
@@ -248,14 +300,65 @@ actor DownloadQueue {
                 await markCancelled(id: id)
                 return
             }
+
+            let desc = error.localizedDescription
+            let transient: Bool
+            if let downloadError = error as? DownloadError {
+                transient = downloadError.isTransientNetworkFailure
+            } else {
+                transient = Self.looksTransientFailure(desc)
+            }
+            let attempt = (autoRetryCounts[id] ?? 0) + 1
+
+            if transient, attempt <= Self.maxAutoRetries {
+                autoRetryCounts[id] = attempt
+                // Backoff job : 15s, 30s, 45s… max 3 min
+                let delaySeconds = min(180, 15 * attempt)
+                let availableAt = Date().addingTimeInterval(TimeInterval(delaySeconds))
+                retryAvailableAt[id] = availableAt
+                guard var waiting = jobs[id] else { return }
+                waiting.state = .queued
+                waiting.updatedAt = Date()
+                jobs[id] = waiting
+                try? store.upsert(waiting)
+                publish(waiting)
+                AppLog.download.info(
+                    "Auto-retry \(attempt, privacy: .public)/\(Self.maxAutoRetries, privacy: .public) in \(delaySeconds, privacy: .public)s — \(desc, privacy: .public)"
+                )
+                let jobID = id
+                Task { [weak self] in
+                    try? await Task.sleep(nanoseconds: UInt64(delaySeconds) * 1_000_000_000)
+                    guard let self else { return }
+                    await self.resumeAfterTransientFailure(id: jobID)
+                }
+                return
+            }
+
+            autoRetryCounts[id] = 0
+            retryAvailableAt[id] = nil
             guard var failed = jobs[id] else { return }
-            failed.state = .failed(message: error.localizedDescription)
+            failed.state = .failed(message: desc)
             failed.updatedAt = Date()
             jobs[id] = failed
             try? store.upsert(failed)
             publish(failed)
-            AppLog.download.error("Job failed: \(error.localizedDescription, privacy: .public)")
+            AppLog.download.error("Job failed: \(desc, privacy: .public)")
         }
+    }
+
+    private func resumeAfterTransientFailure(id: UUID) async {
+        guard cancellationFlags[id] != true else { return }
+        guard var job = jobs[id] else { return }
+        guard case .queued = job.state else { return }
+        retryAvailableAt[id] = nil
+        // Remettre en tête pour reprise rapide des segments manquants.
+        jobOrder.removeAll { $0 == id }
+        jobOrder.insert(id, at: 0)
+        job.updatedAt = Date()
+        jobs[id] = job
+        try? store.upsert(job)
+        publish(job)
+        pump()
     }
 
     private func finalizeWithAssembly(jobID: UUID) async throws {
@@ -362,7 +465,8 @@ actor DownloadQueue {
         case .hls:
             return try await planHLSMediaUnits(
                 playlistURL: job.variantURL,
-                credentials: job.credentials
+                credentials: job.credentials,
+                destinationDirectory: job.destinationDirectory
             )
         case .dash:
             let text = try await downloader.fetchText(url: job.sourceURL, credentials: job.credentials)
@@ -386,6 +490,7 @@ actor DownloadQueue {
         credentials: DownloadCredentials,
         directoryPrefix: String = "",
         indexOffset: Int = 0,
+        destinationDirectory: URL? = nil,
         isCancelled: @escaping @Sendable () -> Bool = { Task.isCancelled }
     ) async throws -> [DownloadUnit] {
         let mediaPlaylist = try await HLSPlaylistCompleter.resolveMediaPlaylist(
@@ -394,11 +499,25 @@ actor DownloadQueue {
             downloader: downloader,
             isCancelled: isCancelled
         )
-        return try MediaDownloadPlanner.hlsUnits(
+        let units = try MediaDownloadPlanner.hlsUnits(
             from: mediaPlaylist,
             directoryPrefix: directoryPrefix,
             indexOffset: indexOffset
         )
+        if let destinationDirectory, let media = mediaPlaylist.media {
+            let targetDir = directoryPrefix.isEmpty
+                ? destinationDirectory
+                : destinationDirectory.appendingPathComponent(
+                    String(directoryPrefix.trimmingCharacters(in: CharacterSet(charactersIn: "/"))),
+                    isDirectory: true
+                )
+            try? MediaDownloadPlanner.writeLocalMediaPlaylist(
+                media: media,
+                units: units,
+                to: targetDir
+            )
+        }
+        return units
     }
 
     private func planAudioUnits(for job: DownloadJob) async throws -> [DownloadUnit]? {
@@ -427,7 +546,8 @@ actor DownloadQueue {
             playlistURL: audioURL,
             credentials: job.credentials,
             directoryPrefix: "audio/",
-            indexOffset: DownloadUnitOffset.audio
+            indexOffset: DownloadUnitOffset.audio,
+            destinationDirectory: job.destinationDirectory
         )
     }
 
@@ -457,7 +577,8 @@ actor DownloadQueue {
             playlistURL: subtitleURL,
             credentials: job.credentials,
             directoryPrefix: "subs/",
-            indexOffset: DownloadUnitOffset.subtitle
+            indexOffset: DownloadUnitOffset.subtitle,
+            destinationDirectory: job.destinationDirectory
         )
     }
 
@@ -480,27 +601,107 @@ actor DownloadQueue {
         let started = ContinuousClock.now
         var bytesDownloaded: Int64 = 0
 
-        try await withThrowingTaskGroup(of: (Int, Int64).self) { group in
+        // Afficher tout de suite « Téléchargement » (sinon MP4 progressif reste bloqué sur Préparation).
+        if var job = jobs[jobID] {
+            job.state = .downloading(
+                progress: Double(completed.count) / Double(max(total, 1)),
+                completedUnits: completed.count,
+                totalUnits: total
+            )
+            job.updatedAt = Date()
+            jobs[jobID] = job
+            publish(job)
+            try? store.upsert(job)
+        }
+
+        // MP4 progressif (1 fichier) : hors TaskGroup pour progression octets + simplicité concurrency.
+        if pending.count == 1, total <= 1, let unit = pending.first {
+            let progressBox = ByteProgressBox()
+            let progressTask = Task {
+                var lastPublished: Int64 = -1
+                while !Task.isCancelled {
+                    let snap = progressBox.snapshot()
+                    if snap.written != lastPublished {
+                        lastPublished = snap.written
+                        await self.publishByteProgress(
+                            jobID: jobID,
+                            written: snap.written,
+                            expected: snap.expected
+                        )
+                    }
+                    try? await Task.sleep(nanoseconds: 200_000_000)
+                }
+            }
+            defer { progressTask.cancel() }
+
+            let result: SegmentDownloadResult
+            do {
+                result = try await downloader.download(
+                    unit: unit,
+                    to: directory,
+                    credentials: credentials,
+                    isCancelled: { Task.isCancelled },
+                    maxRetries: retries,
+                    onProgress: { written, expected in
+                        progressBox.update(written: written, expected: expected)
+                    }
+                )
+            } catch {
+                progressTask.cancel()
+                throw error
+            }
+            progressTask.cancel()
+
+            if Task.isCancelled {
+                throw DownloadError.cancelled
+            }
+            completed.insert(unit.index)
+            bytesDownloaded = result.byteCount
+            if var job = jobs[jobID] {
+                job.completedUnitIndices = completed.sorted()
+                job.state = .downloading(progress: 1, completedUnits: 1, totalUnits: 1)
+                job.updatedAt = Date()
+                jobs[jobID] = job
+                try store.upsert(job)
+                publish(job)
+            }
+            let elapsed = ContinuousClock.now - started
+            let seconds = max(0.001, Double(elapsed.components.seconds) + Double(elapsed.components.attoseconds) / 1e18)
+            let mib = Double(bytesDownloaded) / (1024 * 1024)
+            AppLog.download.info(
+                "Throughput job \(jobID.uuidString, privacy: .public): \(String(format: "%.1f", mib), privacy: .public) MiB in \(String(format: "%.1f", seconds), privacy: .public)s → \(String(format: "%.2f", mib / seconds), privacy: .public) MiB/s (progressive)"
+            )
+            return
+        }
+
+        try await withThrowingTaskGroup(of: Result<(Int, Int64), Error>.self) { group in
             var nextIndex = 0
             var sincePersist = 0
             var lastPublish = ContinuousClock.now
             let publishInterval: Duration = .milliseconds(150)
             let persistEvery = 25
+            var failures: [Error] = []
 
             func enqueueNext() {
                 guard nextIndex < pending.count else { return }
                 let unit = pending[nextIndex]
                 nextIndex += 1
                 group.addTask {
-                    if Task.isCancelled { throw DownloadError.cancelled }
-                    let result = try await downloader.download(
-                        unit: unit,
-                        to: directory,
-                        credentials: credentials,
-                        isCancelled: { Task.isCancelled },
-                        maxRetries: retries
-                    )
-                    return (unit.index, result.byteCount)
+                    if Task.isCancelled {
+                        return .failure(DownloadError.cancelled)
+                    }
+                    do {
+                        let result = try await downloader.download(
+                            unit: unit,
+                            to: directory,
+                            credentials: credentials,
+                            isCancelled: { Task.isCancelled },
+                            maxRetries: retries
+                        )
+                        return .success((unit.index, result.byteCount))
+                    } catch {
+                        return .failure(error)
+                    }
                 }
             }
 
@@ -528,25 +729,40 @@ actor DownloadQueue {
                 }
             }
 
-            // Fenêtre glissante : garder jusqu’à `concurrency` downloads actifs
             let seed = min(concurrency, pending.count)
             for _ in 0..<seed {
                 enqueueNext()
             }
 
-            while let (index, bytes) = try await group.next() {
+            while let outcome = try await group.next() {
                 if cancellationFlags[jobID] == true || Task.isCancelled {
                     group.cancelAll()
                     throw DownloadError.cancelled
                 }
-                completed.insert(index)
-                bytesDownloaded += bytes
-                sincePersist += 1
-                try flushProgress(forcePersist: false, forcePublish: false)
-                enqueueNext()
+                switch outcome {
+                case .success(let (index, bytes)):
+                    completed.insert(index)
+                    bytesDownloaded += bytes
+                    sincePersist += 1
+                    try flushProgress(forcePersist: false, forcePublish: false)
+                    enqueueNext()
+                case .failure(let error):
+                    if let downloadError = error as? DownloadError, downloadError == .cancelled {
+                        group.cancelAll()
+                        throw DownloadError.cancelled
+                    }
+                    failures.append(error)
+                    enqueueNext()
+                }
             }
 
             try flushProgress(forcePersist: true, forcePublish: true)
+            if let first = failures.first {
+                let count = failures.count
+                throw DownloadError.message(
+                    "\(count) segment(s) en échec (\(first.localizedDescription)) — reprends le téléchargement"
+                )
+            }
         }
 
         let elapsed = ContinuousClock.now - started
@@ -557,5 +773,58 @@ actor DownloadQueue {
         AppLog.download.info(
             "Throughput job \(jobID.uuidString, privacy: .public): \(String(format: "%.1f", mib), privacy: .public) MiB in \(String(format: "%.1f", seconds), privacy: .public)s → \(String(format: "%.2f", rate), privacy: .public) MiB/s, \(String(format: "%.1f", segRate), privacy: .public) seg/s (parallel=\(concurrency, privacy: .public))"
         )
+    }
+
+    private func publishByteProgress(jobID: UUID, written: Int64, expected: Int64) {
+        guard var job = jobs[jobID] else { return }
+        switch job.state {
+        case .downloading, .preparing, .queued:
+            break
+        default:
+            return
+        }
+        let fraction: Double
+        if expected > 0 {
+            fraction = min(0.99, Double(written) / Double(expected))
+        } else {
+            // Taille inconnue : avance lente factice pour montrer que ça tourne.
+            fraction = min(0.95, 0.05 + log10(Double(max(written, 1))) / 40.0)
+        }
+        job.state = .downloading(progress: fraction, completedUnits: 0, totalUnits: 1)
+        job.updatedAt = Date()
+        jobs[jobID] = job
+        publish(job)
+    }
+
+    /// Vérifie qu’un segment planifié existe encore sur disque (après rename .image→.ts possible).
+    private func segmentFileExists(unit: DownloadUnit, in directory: URL) -> Bool {
+        let primary = directory.appendingPathComponent(unit.fileName)
+        if FileManager.default.fileExists(atPath: primary.path) { return true }
+        let stem = primary.deletingPathExtension().lastPathComponent
+        for ext in ["ts", "m4s", "mp4", "aac", "m4a", "image"] {
+            let candidate = directory.appendingPathComponent("\(stem).\(ext)")
+            if FileManager.default.fileExists(atPath: candidate.path) { return true }
+        }
+        return false
+    }
+}
+
+/// Boîte thread-safe pour relayer la progression octets hors de l’actor.
+private final class ByteProgressBox: @unchecked Sendable {
+    private let lock = NSLock()
+    private var written: Int64 = 0
+    private var expected: Int64 = 0
+
+    func update(written: Int64, expected: Int64) {
+        lock.lock()
+        self.written = written
+        self.expected = expected
+        lock.unlock()
+    }
+
+    func snapshot() -> (written: Int64, expected: Int64) {
+        lock.lock()
+        defer { lock.unlock() }
+        return (written, expected)
     }
 }

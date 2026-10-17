@@ -6,28 +6,24 @@ struct FFmpegSetupBanner: View {
 
     var body: some View {
         switch appState.ffmpegStatus {
-        case .ready:
+        case .readyBundled, .readySystem:
             EmptyView()
         case .missingFFmpeg:
             bar(
-                title: "FFmpeg n’est pas installé",
-                detail: "Nécessaire pour assembler les MP4. Homebrew va l’installer (quelques minutes)."
+                title: "FFmpeg embarqué manquant",
+                detail: "Relance ./scripts/fetch-bundled-ffmpeg.sh puis rebuild. Secours : installer via Homebrew."
             ) {
-                Button("Installer FFmpeg") {
+                Button("Installer via Homebrew") {
                     appState.installFFmpegWithBrew()
                 }
                 .disabled(appState.ffmpegInstallInProgress)
             }
         case .missingHomebrew:
             bar(
-                title: "FFmpeg et Homebrew manquent",
-                detail: "Installez Homebrew, puis FFmpeg. Sans ça, les téléchargements ne pourront pas être assemblés."
+                title: "FFmpeg embarqué manquant",
+                detail: "Pas de Helpers dans le bundle. Lance ./scripts/fetch-bundled-ffmpeg.sh puis rebuild l’app."
             ) {
-                Button("Ouvrir brew.sh") {
-                    if let url = URL(string: "https://brew.sh") {
-                        NSWorkspace.shared.open(url)
-                    }
-                }
+                EmptyView()
             }
         }
     }

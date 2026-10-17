@@ -147,6 +147,7 @@ enum PageTitleResolver {
 
         if junkExact.contains(title) { return nil }
         if looksLikeSiteBrand(title, host: host) { return nil }
+        if looksOpaque(title) { return nil }
         if title.count < 2 { return nil }
         return String(title.prefix(160))
     }
@@ -204,7 +205,15 @@ enum PageTitleResolver {
     }
 
     private static func looksOpaque(_ name: String) -> Bool {
+        if name.contains(where: { $0.isWhitespace }) { return false }
         if name.count >= 24, name.allSatisfy({ $0.isHexDigit || $0 == "-" }) {
+            return true
+        }
+        // IDs CDN / tokens : long alphanum sans séparateurs (ex. hash m3u8)
+        if name.count >= 20,
+           name.unicodeScalars.allSatisfy({ CharacterSet.alphanumerics.contains($0) }),
+           name.contains(where: \.isLetter),
+           name.contains(where: \.isNumber) {
             return true
         }
         if name.count >= 20, name.rangeOfCharacter(from: .letters) == nil {

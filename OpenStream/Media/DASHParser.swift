@@ -262,7 +262,25 @@ enum DASHParser {
                 if let t = Int64(s.attribute(forName: "t")?.stringValue ?? "") {
                     time = t
                 }
-                let repeatCount = max(0, r) + 1
+                // DASH: r=-1 → répéter jusqu’à la fin de la Period (pas « 1 fois »).
+                let repeatCount: Int
+                if r == -1 {
+                    guard d > 0, let periodDuration, periodDuration > 0, timescale > 0 else {
+                        throw DASHParserError.message("SegmentTimeline r=-1 sans durée de Period")
+                    }
+                    let periodTicks = Int64(periodDuration * timescale)
+                    var count = 0
+                    var cursor = time
+                    while cursor + d <= periodTicks {
+                        count += 1
+                        cursor += d
+                        // Garde-fou (évite boucle infinie sur MPD foireux)
+                        if count > 100_000 { break }
+                    }
+                    repeatCount = max(1, count)
+                } else {
+                    repeatCount = max(0, r) + 1
+                }
                 for _ in 0..<repeatCount {
                     let path = expandTemplate(mediaTemplate, number: number, representationID: representationID, bandwidth: bandwidth, time: time)
                     segments.append(DASHSegmentRef(url: try resolveURI(path, relativeTo: baseURL), isInitialization: false))
