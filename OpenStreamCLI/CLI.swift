@@ -22,6 +22,8 @@ enum OpenStreamCLIApp {
             await CLI.cmdFetch(flags: flags)
         case "season":
             await CLI.cmdSeason(flags: flags)
+        case "flix":
+            await CLI.cmdFlix(flags: flags)
         case "status", "list":
             await CLI.cmdStatus(flags: flags)
         case "wait":
@@ -82,6 +84,10 @@ enum CLI {
         var seasonNumber: Int?
         var timeout: TimeInterval = 45
         var quality: HLSQualityPreference = .best
+        var maxItems: Int?
+        var sinceRaw: String?
+        var markSeen = false
+        var enqueue = false
         var positionals: [String] = []
     }
 
@@ -111,7 +117,8 @@ enum CLI {
             Usage:
               openstream-cli download <url> [options]
               openstream-cli fetch <pageURL> [--detect-only|--auto-download] [options]
-              openstream-cli season <pageURL> [--list-only|--auto-download] [options]
+              openstream-cli season <pageURL|showName> [--show NAME] [--season N] [options]
+              openstream-cli flix scan|digest|bootstrap|seen|pick … [options]
               openstream-cli status [jobId]
               openstream-cli list
               openstream-cli wait <jobId>
@@ -124,6 +131,7 @@ enum CLI {
               --show <name>  --season <n>
               --list-only  --detect-only  --auto-download
               --shared-db  --via-app  --timeout <sec>  --quality best|ask
+              --max <n>  --since <ISO|Nd>  --mark-seen  --enqueue
 
             Exit: 0 ok · 2 usage · 3 réseau · 4 assemble · 5 introuvable · 6 annulé · 7 detect timeout
             """
@@ -174,6 +182,13 @@ enum CLI {
             case "--quality":
                 i += 1
                 if let v = arg(args, i), let q = HLSQualityPreference(rawValue: v) { flags.quality = q }
+            case "--max":
+                i += 1
+                if let v = arg(args, i), let n = Int(v), n > 0 { flags.maxItems = n }
+            case "--since":
+                i += 1; flags.sinceRaw = arg(args, i)
+            case "--mark-seen": flags.markSeen = true
+            case "--enqueue": flags.enqueue = true
             default:
                 if a.hasPrefix("-") {
                     fputs("Option inconnue: \(a)\n", stderr)
@@ -366,14 +381,41 @@ enum CLI {
     }
 
     static func cmdSeason(flags: Flags) async {
-        guard let raw = flags.positionals.first,
-              let url = URL(string: raw),
-              let scheme = url.scheme?.lowercased(),
-              ["http", "https"].contains(scheme)
-        else {
-            fputs("Usage: openstream-cli season <pageURL> [--list-only|--auto-download]\n", stderr)
-            exit(AgentExitCode.usage)
+        // season <pageURL> | season <showName> | season --show NAME --season N
+        var flags = flags
+        let resolved: (url: URL, show: String?)
+        do {
+            resolved = try await resolveSeasonPage(flags: &flags)
+        } catch let err as SeasonResolveError {
+            AgentEvent.emit(
+                AgentEvent(event: .failed, message: err.localizedDescription),
+                jsonMode: flags.json
+            )
+            if case .usage = err {
+                exit(AgentExitCode.usage)
+            }
+            exit(AgentExitCode.notFound)
+        } catch {
+            AgentEvent.emit(
+                AgentEvent(event: .failed, message: error.localizedDescription),
+                jsonMode: flags.json
+            )
+            exit(AgentExitCode.notFound)
         }
+        let url = resolved.url
+        if flags.showName == nil { flags.showName = resolved.show }
+
+        AgentEvent.emit(
+            AgentEvent(
+                event: .info,
+                title: flags.showName,
+                message: "resolved season page",
+                url: url.absoluteString,
+                show: flags.showName,
+                season: flags.seasonNumber
+            ),
+            jsonMode: flags.json
+        )
 
         let episodes: [EpisodeRef]
         do {
@@ -535,6 +577,61 @@ enum CLI {
         exit(AgentExitCode.success)
     }
 
+    /// URL http(s) directe, ou résolution via favoris + recherche site (FS/DLE).
+    private static func resolveSeasonPage(flags: inout Flags) async throws -> (url: URL, show: String?) {
+        let raw = flags.positionals.first?.trimmingCharacters(in: .whitespacesAndNewlines)
+
+        if let raw, let url = URL(string: raw),
+           let scheme = url.scheme?.lowercased(),
+           ["http", "https"].contains(scheme),
+           url.host() != nil {
+            return (url, flags.showName)
+        }
+
+        let show: String = {
+            if let s = flags.showName?.trimmingCharacters(in: .whitespacesAndNewlines), !s.isEmpty {
+                return s
+            }
+            if let raw, !raw.isEmpty, URL(string: raw)?.scheme == nil {
+                return raw
+            }
+            return ""
+        }()
+        guard !show.isEmpty else {
+            throw SeasonResolveError.usage
+        }
+        flags.showName = show
+        let season = flags.seasonNumber ?? 1
+        flags.seasonNumber = season
+
+        let support = flags.sharedDB ? Paths.sharedStore : Paths.supportRoot
+        if let hit = await SeasonResolver.resolve(
+            show: show,
+            season: season,
+            supportRoot: support
+        ) {
+            AgentEvent.emit(
+                AgentEvent(
+                    event: .info,
+                    message: "favoris/search → \(hit.source)",
+                    url: hit.pageURL.absoluteString,
+                    show: hit.show,
+                    season: hit.season
+                ),
+                jsonMode: flags.json
+            )
+            return (hit.pageURL, hit.show)
+        }
+
+        let bookmarks = SeasonResolver.loadBookmarks(supportRoot: support)
+        let sites = bookmarks.map(\.title).joined(separator: ", ")
+        throw SeasonResolveError.notFound(
+            show: show,
+            season: season,
+            bookmarkTitles: sites.isEmpty ? "(aucun favori)" : sites
+        )
+    }
+
     private static func enumerateSeason(pageURL: URL, flags: Flags) async throws -> [EpisodeRef] {
         let showHint = flags.showName ?? flags.title
         let pathMatch = EpisodeEnumerator.parseWatchPath(pageURL)
@@ -610,6 +707,258 @@ enum CLI {
             showHint: showHint,
             timeout: timeout
         )
+    }
+
+    // MARK: - Flix
+
+    static func cmdFlix(flags: Flags) async {
+        guard let sub = flags.positionals.first?.lowercased() else {
+            fputs(
+                """
+                Usage:
+                  openstream-cli flix scan [--json] [--max N] [--since ISO|Nd]
+                  openstream-cli flix digest [--json] [--max N] [--mark-seen]
+                  openstream-cli flix bootstrap
+                  openstream-cli flix seen list|clear
+                  openstream-cli flix pick <n|n,m> [--enqueue]
+
+                """,
+                stderr
+            )
+            exit(AgentExitCode.usage)
+        }
+        var rest = flags
+        rest.positionals = Array(flags.positionals.dropFirst())
+        let root = Paths.supportRoot
+
+        switch sub {
+        case "scan":
+            await flixScan(flags: rest, supportRoot: root)
+        case "digest":
+            await flixDigest(flags: rest, supportRoot: root)
+        case "bootstrap":
+            await flixBootstrap(flags: rest, supportRoot: root)
+        case "seen":
+            flixSeen(flags: rest, supportRoot: root)
+        case "pick":
+            await flixPick(flags: rest, supportRoot: root)
+        default:
+            fputs("flix: sous-commande inconnue « \(sub) »\n", stderr)
+            exit(AgentExitCode.usage)
+        }
+    }
+
+    private static func flixScan(flags: Flags, supportRoot: URL) async {
+        var since: Date?
+        if let raw = flags.sinceRaw {
+            do { since = try FlixService.parseSince(raw) }
+            catch {
+                fputs("\(error.localizedDescription)\n", stderr)
+                exit(AgentExitCode.usage)
+            }
+        }
+        let result = await FlixService.scan(
+            supportRoot: supportRoot,
+            since: since,
+            max: flags.maxItems,
+            session: .shared
+        )
+        for w in result.warnings {
+            fputs("\(w)\n", stderr)
+        }
+        if flags.json {
+            struct Out: Encodable {
+                var count: Int
+                var hubsOK: Int
+                var hubsSkipped: Int
+                var items: [FlixItem]
+                enum CodingKeys: String, CodingKey {
+                    case count, items
+                    case hubsOK = "hubs_ok"
+                    case hubsSkipped = "hubs_skipped"
+                }
+            }
+            print(FlixService.encodeJSON(Out(
+                count: result.items.count,
+                hubsOK: result.hubsOK,
+                hubsSkipped: result.hubsSkipped,
+                items: result.items
+            )))
+        } else {
+            if result.items.isEmpty {
+                print("Flix scan — 0 item")
+            } else {
+                print("Flix scan — \(result.items.count) item(s)")
+                for (i, item) in result.items.enumerated() {
+                    print("\(i + 1). \(item.display) (\(item.source))")
+                }
+            }
+        }
+        exit(AgentExitCode.success)
+    }
+
+    private static func flixDigest(flags: Flags, supportRoot: URL) async {
+        let max = flags.maxItems ?? FlixService.defaultMax
+        let (digest, warnings, bootstrapped) = await FlixService.digest(
+            supportRoot: supportRoot,
+            max: max,
+            markSeen: flags.markSeen,
+            autoBootstrapIfEmpty: true
+        )
+        for w in warnings {
+            fputs("\(w)\n", stderr)
+        }
+        if bootstrapped {
+            fputs("Flix: bootstrap auto (seen était vide) — digest silencieux\n", stderr)
+        }
+        if flags.json {
+            print(FlixService.encodeJSON(digest))
+        } else if digest.count == 0 {
+            // Silence total si 0 nouveauté (stdout vide hors JSON)
+        } else {
+            print("Flix — \(digest.count) nouveauté\(digest.count > 1 ? "s" : "")")
+            let ordered = digest.items.values.sorted { $0.n < $1.n }
+            for e in ordered {
+                print("\(e.n). \(e.display) (\(e.source))")
+            }
+            print("Réponds 1 / 1,3 ou season « Show » --season N")
+        }
+        exit(AgentExitCode.success)
+    }
+
+    private static func flixBootstrap(flags: Flags, supportRoot: URL) async {
+        let (marked, warnings) = await FlixService.bootstrap(supportRoot: supportRoot)
+        for w in warnings {
+            fputs("\(w)\n", stderr)
+        }
+        if flags.json {
+            struct Out: Encodable { var marked: Int }
+            print(FlixService.encodeJSON(Out(marked: marked)))
+        } else {
+            print("Flix bootstrap — \(marked) id(s) marqué(s) vus")
+        }
+        exit(AgentExitCode.success)
+    }
+
+    private static func flixSeen(flags: Flags, supportRoot: URL) {
+        let action = flags.positionals.first?.lowercased() ?? "list"
+        switch action {
+        case "list":
+            let ids = FlixStore.loadSeen(supportRoot: supportRoot).sorted()
+            if flags.json {
+                print(FlixService.encodeJSON(ids))
+            } else {
+                print("Flix seen — \(ids.count)")
+                for id in ids { print(id) }
+            }
+            exit(AgentExitCode.success)
+        case "clear":
+            do {
+                try FlixStore.clearSeen(supportRoot: supportRoot)
+                if flags.json {
+                    print("{\"cleared\":true}")
+                } else {
+                    print("Flix seen — cleared")
+                }
+                exit(AgentExitCode.success)
+            } catch {
+                fputs("\(error.localizedDescription)\n", stderr)
+                exit(AgentExitCode.network)
+            }
+        default:
+            fputs("Usage: openstream-cli flix seen list|clear\n", stderr)
+            exit(AgentExitCode.usage)
+        }
+    }
+
+    private static func flixPick(flags: Flags, supportRoot: URL) async {
+        guard let spec = flags.positionals.first else {
+            fputs("Usage: openstream-cli flix pick <n|n,m> [--enqueue]\n", stderr)
+            exit(AgentExitCode.usage)
+        }
+        let indices: [Int]
+        do {
+            indices = try FlixService.parsePickSpec(spec)
+        } catch {
+            fputs("\(error.localizedDescription)\n", stderr)
+            exit(AgentExitCode.usage)
+        }
+        let items: [FlixItem]
+        do {
+            items = try FlixService.pick(indices: indices, supportRoot: supportRoot)
+        } catch {
+            fputs("\(error.localizedDescription)\n", stderr)
+            exit(AgentExitCode.notFound)
+        }
+
+        if !flags.enqueue {
+            if flags.json {
+                print(FlixService.encodeJSON(items))
+            } else {
+                for item in items {
+                    switch item.mode {
+                    case .season:
+                        print(
+                            "season \(item.show.map { "'\($0)'" } ?? item.url) --season \(item.season ?? 1)"
+                        )
+                    case .fetch:
+                        print("fetch \(item.url)")
+                    }
+                }
+            }
+            exit(AgentExitCode.success)
+        }
+
+        // --enqueue : sous-processus `season` / `fetch` (évite exit() imbriqué)
+        let exe = CommandLine.arguments[0]
+        var lastCode: Int32 = AgentExitCode.success
+        for item in items {
+            AgentEvent.emit(
+                AgentEvent(
+                    event: .info,
+                    title: item.display,
+                    message: "flix pick → \(item.mode.rawValue)",
+                    url: item.url,
+                    show: item.show,
+                    season: item.season
+                ),
+                jsonMode: flags.json
+            )
+            var args: [String]
+            switch item.mode {
+            case .season:
+                let show = item.show ?? item.title
+                args = [
+                    "season", show,
+                    "--season", String(item.season ?? 1),
+                    "--auto-download"
+                ]
+            case .fetch:
+                args = ["fetch", item.url, "--auto-download"]
+            }
+            if flags.json { args.append("--json") }
+            if flags.sharedDB { args.append("--shared-db") }
+            if let out = flags.out { args.append(contentsOf: ["--out", out.path]) }
+            let code = flixSpawn(executable: exe, arguments: args)
+            if code != 0 { lastCode = code }
+        }
+        exit(lastCode == AgentExitCode.success ? AgentExitCode.success : lastCode)
+    }
+
+    private static func flixSpawn(executable: String, arguments: [String]) -> Int32 {
+        let process = Process()
+        process.executableURL = URL(fileURLWithPath: executable)
+        process.arguments = arguments
+        process.standardOutput = FileHandle.standardOutput
+        process.standardError = FileHandle.standardError
+        do {
+            try process.run()
+            process.waitUntilExit()
+            return process.terminationStatus
+        } catch {
+            fputs("flix pick: \(error.localizedDescription)\n", stderr)
+            return AgentExitCode.network
+        }
     }
 
     static func cmdStatus(flags: Flags) async {

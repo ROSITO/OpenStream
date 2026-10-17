@@ -177,6 +177,19 @@ Références : `PRD_OpenStream.md`, `ARCHITECTURE.md`, `MEMORY.md`, `CLAUDE.md`.
 **Done quand :** un agent peut lister une saison et télécharger un épisode en JSON Lines sans ouvrir l’app.  
 **Statut :** ✅ livré 2026-10-17
 
+### Phase 8c — Flix digest (D019)
+
+**Objectif :** lister les nouveautés des hubs favoris (RSS) sans `fetch` sur une homepage.
+
+- [x] `flix scan` / `digest` / `bootstrap` / `seen` / `pick`
+- [x] RSS DLE + normalisation host favori ; hubs sans RSS = skip
+- [x] `flix_seen.json` / `flix_last_digest.json` ; `--mark-seen` ; bootstrap auto si seen vide
+- [x] `pick --enqueue` → `season` / `fetch`
+- [x] Doc agent + deploy ollamac
+
+**Done quand :** `flix digest --json` renvoie un digest exploitable par un agent (ou `count: 0`).  
+**Statut :** ✅ livré 2026-10-17
+
 ---
 
 ## Phase 9 — Gate DRM (release open source publique)

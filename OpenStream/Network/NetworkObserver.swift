@@ -113,6 +113,11 @@ extension NetworkObserver {
       if (window.__openstreamMediaHookInstalled) { return; }
       window.__openstreamMediaHookInstalled = true;
 
+      // Anti onglets pub / pop-under (sites stream).
+      try {
+        window.open = function () { return null; };
+      } catch (e) {}
+
       function post(url, mime, source) {
         try {
           if (!url || typeof url !== 'string') { return; }

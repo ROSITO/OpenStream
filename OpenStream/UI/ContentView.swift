@@ -400,20 +400,28 @@ struct BrowserPane: View {
                     .background(.quaternary.opacity(0.5))
             }
         }
-        .alert(
-            "Redirection bloquée",
-            isPresented: Binding(
-                get: { browser.pendingRedirectURL != nil },
-                set: { if !$0 { browser.cancelPendingRedirect() } }
-            )
-        ) {
-            Button("Y aller") { browser.confirmPendingRedirect() }
-            Button("Rester ici", role: .cancel) { browser.cancelPendingRedirect() }
-        } message: {
-            if let url = browser.pendingRedirectURL {
-                Text("La page veut t’envoyer vers :\n\(url.absoluteString)")
+        .overlay(alignment: .bottom) {
+            if let banner = browser.blockedNavBanner {
+                HStack(spacing: 8) {
+                    Image(systemName: "shield.fill")
+                        .foregroundStyle(.secondary)
+                    Text(banner)
+                        .font(.caption)
+                        .lineLimit(1)
+                    Spacer(minLength: 0)
+                    Button("OK") { browser.dismissBlockBanner() }
+                        .font(.caption)
+                        .buttonStyle(.plain)
+                }
+                .padding(.horizontal, 12)
+                .padding(.vertical, 8)
+                .background(.ultraThinMaterial)
+                .clipShape(RoundedRectangle(cornerRadius: 8))
+                .padding(12)
+                .transition(.move(edge: .bottom).combined(with: .opacity))
             }
         }
+        .animation(.easeOut(duration: 0.2), value: browser.blockedNavBanner)
     }
 }
 

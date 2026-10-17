@@ -23,6 +23,12 @@ targets:
           - Resources/AppIcon-1024.png
           - Resources/Helpers/**
       - path: OpenStreamCore/EpisodeEnumerator.swift
+      - path: OpenStreamCore/SeasonResolver.swift
+      - path: OpenStreamCore/PopupGuard.swift
+      - path: OpenStreamCore/FlixModels.swift
+      - path: OpenStreamCore/FlixRSS.swift
+      - path: OpenStreamCore/FlixStore.swift
+      - path: OpenStreamCore/FlixService.swift
       - path: OpenStream/Resources/Helpers
         type: folder
         buildPhase: resources

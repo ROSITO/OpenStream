@@ -18,7 +18,7 @@ Documents de référence (lire dans cet ordre) :
 2. `ARCHITECTURE.md` — modules, frontières, contrats
 3. `ROADMAP.md` — phases et critères de done
 4. `MEMORY.md` — décisions figées et pièges connus
-5. `OpenStreamCLI/README.md` — contrat agent (`openstream-cli` JSON Lines / `season` / exit codes)
+5. `OpenStreamCLI/README.md` — contrat agent (`openstream-cli` JSON Lines / `season` / `flix` / exit codes)
 6. `README.md` — install / build public
 
 ---

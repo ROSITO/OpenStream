@@ -23,10 +23,12 @@ final class BrowserController: NSObject {
     var blockPopups: Bool = true
     /// Applique la liste `WKContentRuleList` pubs/trackers (défaut : oui).
     var blockAds: Bool = true
-    /// Intercepte les navigations auto (JS / meta / chaîne après chargement) et demande confirmation.
+    /// Bloque en silence les navigations auto **cross-site** (JS / meta) — plus d’alerte modale.
     var blockAutomaticRedirects: Bool = true
-    /// Redirection proposée à l’utilisateur (nil = aucune).
-    var pendingRedirectURL: URL?
+    /// Compteur de navigations / popups bloqués (bandeau UI, pas de modal).
+    var blockedNavCount: Int = 0
+    /// Message court pour le bandeau (nil = masqué).
+    var blockedNavBanner: String?
 
     private weak var webView: WKWebView?
     private var progressObservation: NSKeyValueObservation?
@@ -34,6 +36,7 @@ final class BrowserController: NSObject {
     private var urlObservation: NSKeyValueObservation?
     /// Autorise la chaîne de redirects HTTP tant que la navigation utilisateur n’a pas fini.
     private var expectsRedirectChain = false
+    private var bannerClearTask: Task<Void, Never>?
 
     func attach(webView: WKWebView) {
         self.webView = webView
@@ -214,7 +217,7 @@ final class BrowserController: NSObject {
     func load(url: URL) {
         urlString = url.absoluteString
         lastErrorMessage = nil
-        pendingRedirectURL = nil
+        resetBlockBanner()
         expectsRedirectChain = true
         webView?.load(URLRequest(url: url))
         AppLog.browser.info("Load \(url.absoluteString, privacy: .public)")
@@ -237,16 +240,34 @@ final class BrowserController: NSObject {
 
     func stop() { webView?.stopLoading() }
 
-    func confirmPendingRedirect() {
-        guard let url = pendingRedirectURL else { return }
-        pendingRedirectURL = nil
-        load(url: url)
+    func dismissBlockBanner() {
+        bannerClearTask?.cancel()
+        blockedNavBanner = nil
     }
 
-    func cancelPendingRedirect() {
-        pendingRedirectURL = nil
-        AppLog.browser.info("Redirect declined")
-    }}
+    private func resetBlockBanner() {
+        bannerClearTask?.cancel()
+        blockedNavCount = 0
+        blockedNavBanner = nil
+    }
+
+    private func noteBlocked(_ kind: String, url: URL?) {
+        blockedNavCount += 1
+        let host = url?.host() ?? "?"
+        blockedNavBanner = blockedNavCount == 1
+            ? "\(kind) bloqué (\(host))"
+            : "\(blockedNavCount) pubs / redirections bloquées"
+        AppLog.browser.info(
+            "Silent-blocked \(kind, privacy: .public) \(url?.absoluteString ?? "?", privacy: .public)"
+        )
+        bannerClearTask?.cancel()
+        bannerClearTask = Task { @MainActor in
+            try? await Task.sleep(nanoseconds: 4_000_000_000)
+            guard !Task.isCancelled else { return }
+            self.blockedNavBanner = nil
+        }
+    }
+}
 
 extension BrowserController: WKNavigationDelegate {
     func webView(_ webView: WKWebView, didStartProvisionalNavigation navigation: WKNavigation!) {
@@ -297,12 +318,10 @@ extension BrowserController: WKNavigationDelegate {
         decidePolicyFor navigationAction: WKNavigationAction,
         decisionHandler: @escaping (WKNavigationActionPolicy) -> Void
     ) {
-        // Pop-under / target=_blank sans cadre : bloquer si activé (sauf clic lien → même fenêtre).
-        if blockPopups,
-           navigationAction.targetFrame == nil,
-           navigationAction.navigationType != .linkActivated
-        {
-            AppLog.browser.debug("Blocked popup navigation \(navigationAction.request.url?.absoluteString ?? "?", privacy: .public)")
+        // target=_blank / pop-under : ne jamais laisser voler la vue principale.
+        // Les vrais liens même-site passent par `createWebViewWith` → load in-place.
+        if blockPopups, navigationAction.targetFrame == nil {
+            noteBlocked("popup", url: navigationAction.request.url)
             decisionHandler(.cancel)
             return
         }
@@ -319,11 +338,9 @@ extension BrowserController: WKNavigationDelegate {
             onMediaCandidate?(candidate)
         }
 
-        if shouldPromptBeforeNavigation(navigationAction) {
-            if let url = navigationAction.request.url {
-                pendingRedirectURL = url
-                AppLog.browser.info("Redirect pending confirmation \(url.absoluteString, privacy: .public)")
-            }
+        // Cross-site auto (JS/meta) → cancel silencieux. Plus jamais d’alerte modale.
+        if shouldSilentBlockAutoNavigation(navigationAction) {
+            noteBlocked("redirect", url: navigationAction.request.url)
             decisionHandler(.cancel)
             return
         }
@@ -338,33 +355,23 @@ extension BrowserController: WKNavigationDelegate {
         decisionHandler(.allow)
     }
 
-    /// Navigations main-frame non initiées par l’utilisateur (JS, meta-refresh, etc.).
-    private func shouldPromptBeforeNavigation(_ action: WKNavigationAction) -> Bool {
+    /// Main-frame `.other` cross-site après chargement = hijack pub typique.
+    private func shouldSilentBlockAutoNavigation(_ action: WKNavigationAction) -> Bool {
         guard blockAutomaticRedirects else { return false }
         guard action.targetFrame?.isMainFrame != false else { return false }
-        guard let url = action.request.url,
-              let scheme = url.scheme?.lowercased(),
-              scheme == "http" || scheme == "https"
-        else { return false }
+        guard let url = action.request.url, PopupGuard.isHTTPURL(url) else { return false }
 
         switch action.navigationType {
         case .linkActivated, .formSubmitted, .backForward, .reload:
             return false
         case .other:
             if expectsRedirectChain { return false }
-            // Éviter de re-proposer la même URL déjà affichée.
-            if let current = webView?.url, Self.samePage(current, url) { return false }
+            // Même site (SPA / soft nav) : laisser passer.
+            if PopupGuard.sameSite(current: webView?.url, target: url) { return false }
             return true
         @unknown default:
             return false
         }
-    }
-
-    private static func samePage(_ a: URL, _ b: URL) -> Bool {
-        a.scheme?.lowercased() == b.scheme?.lowercased()
-            && a.host()?.lowercased() == b.host()?.lowercased()
-            && a.path == b.path
-            && (a.query ?? "") == (b.query ?? "")
     }
 
     func webView(
@@ -405,25 +412,27 @@ extension BrowserController: WKUIDelegate {
         for navigationAction: WKNavigationAction,
         windowFeatures: WKWindowFeatures
     ) -> WKWebView? {
+        let target = navigationAction.request.url
+        let userActivated = navigationAction.navigationType == .linkActivated
+
         guard blockPopups else {
-            // Pas de multi-onglets pour l’instant : même comportement (même fenêtre).
-            if let url = navigationAction.request.url {
-                webView.load(URLRequest(url: url))
+            // Pas de multi-onglets : ouvrir dans la même vue.
+            if let target, PopupGuard.isHTTPURL(target) {
+                webView.load(URLRequest(url: target))
             }
             return nil
         }
 
-        if navigationAction.navigationType == .linkActivated,
-           let url = navigationAction.request.url,
-           let scheme = url.scheme?.lowercased(),
-           scheme == "http" || scheme == "https"
-        {
-            webView.load(URLRequest(url: url))
-            AppLog.browser.debug("Popup link opened in-place \(url.absoluteString, privacy: .public)")
+        // Pubs : window.open / blank cross-site → ignoré. Lien utilisateur même site → in-place.
+        if PopupGuard.shouldOpenBlankInPlace(
+            currentPage: webView.url,
+            target: target,
+            userActivated: userActivated
+        ), let target {
+            webView.load(URLRequest(url: target))
+            AppLog.browser.debug("Blank link opened in-place \(target.absoluteString, privacy: .public)")
         } else {
-            AppLog.browser.debug(
-                "Blocked window.open \(navigationAction.request.url?.absoluteString ?? "?", privacy: .public)"
-            )
+            noteBlocked("popup", url: target)
         }
         return nil
     }
@@ -434,7 +443,7 @@ extension BrowserController: WKUIDelegate {
         initiatedByFrame frame: WKFrameInfo,
         completionHandler: @escaping () -> Void
     ) {
-        // Les alertes JS sont souvent des pubs / arnaques sur les sites stream.
+        // Avaler sans spammer le bandeau (sites tirent des dizaines d’alertes).
         if blockPopups {
             AppLog.browser.debug("Suppressed JS alert")
             completionHandler()
@@ -455,6 +464,7 @@ extension BrowserController: WKUIDelegate {
         completionHandler: @escaping (Bool) -> Void
     ) {
         if blockPopups {
+            AppLog.browser.debug("Suppressed JS confirm")
             completionHandler(false)
             return
         }
@@ -464,6 +474,21 @@ extension BrowserController: WKUIDelegate {
         alert.addButton(withTitle: "OK")
         alert.addButton(withTitle: "Annuler")
         completionHandler(alert.runModal() == .alertFirstButtonReturn)
+    }
+
+    func webView(
+        _ webView: WKWebView,
+        runJavaScriptTextInputPanelWithPrompt prompt: String,
+        defaultText: String?,
+        initiatedByFrame frame: WKFrameInfo,
+        completionHandler: @escaping (String?) -> Void
+    ) {
+        if blockPopups {
+            AppLog.browser.debug("Suppressed JS prompt")
+            completionHandler(nil)
+            return
+        }
+        completionHandler(defaultText)
     }
 }
 

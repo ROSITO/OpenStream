@@ -16,11 +16,18 @@ final class HeadlessBrowserSession: NSObject {
         HeadlessAppKit.prepare()
         let config = WKWebViewConfiguration()
         config.websiteDataStore = .nonPersistent()
+        let neutralize = WKUserScript(
+            source: PopupGuard.neutralizeWindowOpenJS,
+            injectionTime: .atDocumentStart,
+            forMainFrameOnly: false
+        )
+        config.userContentController.addUserScript(neutralize)
         let wv = WKWebView(frame: CGRect(x: 0, y: 0, width: 1280, height: 720), configuration: config)
         self.webView = wv
         self.catalog = MediaCatalog(session: .shared, cookieBridge: nil)
         super.init()
         wv.navigationDelegate = self
+        wv.uiDelegate = self
         observer.attachScriptMessaging(to: wv)
         observer.onCandidateAccepted = { [weak self] candidate in
             Task { @MainActor in
@@ -222,6 +229,56 @@ extension HeadlessBrowserSession: WKNavigationDelegate {
     ) {
         navigationContinuation?.resume(throwing: error)
         navigationContinuation = nil
+    }
+
+    func webView(
+        _ webView: WKWebView,
+        decidePolicyFor navigationAction: WKNavigationAction,
+        decisionHandler: @escaping (WKNavigationActionPolicy) -> Void
+    ) {
+        // Empêche les target=_blank / pop-under de quitter la page cible (CLI).
+        if navigationAction.targetFrame == nil {
+            decisionHandler(.cancel)
+            return
+        }
+        decisionHandler(.allow)
+    }
+}
+
+extension HeadlessBrowserSession: WKUIDelegate {
+    func webView(
+        _ webView: WKWebView,
+        createWebViewWith configuration: WKWebViewConfiguration,
+        for navigationAction: WKNavigationAction,
+        windowFeatures: WKWindowFeatures
+    ) -> WKWebView? {
+        // Jamais de nouvel onglet en headless ; même site + clic → in-place, sinon ignore.
+        if PopupGuard.shouldOpenBlankInPlace(
+            currentPage: webView.url,
+            target: navigationAction.request.url,
+            userActivated: navigationAction.navigationType == .linkActivated
+        ), let url = navigationAction.request.url {
+            webView.load(URLRequest(url: url))
+        }
+        return nil
+    }
+
+    func webView(
+        _ webView: WKWebView,
+        runJavaScriptAlertPanelWithMessage message: String,
+        initiatedByFrame frame: WKFrameInfo,
+        completionHandler: @escaping () -> Void
+    ) {
+        completionHandler()
+    }
+
+    func webView(
+        _ webView: WKWebView,
+        runJavaScriptConfirmPanelWithMessage message: String,
+        initiatedByFrame frame: WKFrameInfo,
+        completionHandler: @escaping (Bool) -> Void
+    ) {
+        completionHandler(false)
     }
 }
 

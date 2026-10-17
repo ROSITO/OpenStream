@@ -5,7 +5,7 @@ import WebKit
 @MainActor
 enum ContentBlocker {
     /// Incrémenter si `adblock-rules.json` change (invalide le cache WebKit).
-    static let listIdentifier = "app.openstream.adblock.v1"
+    static let listIdentifier = "app.openstream.adblock.v2"
 
     static func loadRulesJSON() throws -> String {
         let bundle = Bundle.main
@@ -105,6 +105,8 @@ extension ContentBlocker {
       {"trigger":{"url-filter":"popcash\\.net"},"action":{"type":"block"}},
       {"trigger":{"url-filter":"propellerads\\.com"},"action":{"type":"block"}},
       {"trigger":{"url-filter":"exoclick\\.com"},"action":{"type":"block"}},
+      {"trigger":{"url-filter":"onclickalgo\\.com"},"action":{"type":"block"}},
+      {"trigger":{"url-filter":"pushground\\.com"},"action":{"type":"block"}},
       {"trigger":{"url-filter":".*","resource-type":["popup"]},"action":{"type":"block"}},
       {"trigger":{"url-filter":".*"},"action":{"type":"css-display-none","selector":".adsbygoogle, ins.adsbygoogle, [id^=\"google_ads_\"], .ad-banner, .ad-container, #ads, #ad-container"}}
     ]

@@ -48,7 +48,7 @@ final class AppSettings {
     var blockPopups: Bool = true
     /// Adblock via WKContentRuleList.
     var blockAds: Bool = true
-    /// Demander confirmation avant une redirection automatique.
+    /// Bloquer en silence les redirections automatiques cross-site (pas de modal).
     var blockAutomaticRedirects: Bool = true
 
     private(set) var urlSession: URLSession = .shared

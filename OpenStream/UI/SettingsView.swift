@@ -88,8 +88,8 @@ struct SettingsView: View {
             Section("Navigateur") {
                 Toggle("Bloquer les popups", isOn: $settings.blockPopups)
                 Toggle("Bloquer les publicités", isOn: $settings.blockAds)
-                Toggle("Confirmer les redirections automatiques", isOn: $settings.blockAutomaticRedirects)
-                Text("Popups : window.open / target=_blank. Pubs : liste embarquée. Redirections : JS ou meta-refresh après chargement — une alerte propose d’y aller ou de rester.")
+                Toggle("Bloquer les redirections auto (cross-site)", isOn: $settings.blockAutomaticRedirects)
+                Text("Popups / alertes JS / target=_blank : bloqués en silence (bandeau). Redirections JS cross-site : bloquées sans modal. Même site (lecteur) : autorisé. Pubs : liste embarquée.")
                     .font(.caption)
                     .foregroundStyle(.secondary)
                     .fixedSize(horizontal: false, vertical: true)

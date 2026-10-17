@@ -86,9 +86,11 @@ Mémoire projet : décisions figées, contraintes, et pièges.
 **Date :** 2026-09-30
 
 ### D014 — Bloqueur popups + pubs (navigateur)
-**Décision :** `WKUIDelegate` bloque `window.open` / popups (liens `target=_blank` ouverts dans la même fenêtre) ; `WKContentRuleList` embarqué (`adblock-rules.json`) pour pubs/trackers courants. Réglages **Paramètres → Navigateur**, défaut ON. Ne pas bloquer les CDN média / antibot (PerimeterX, GTM) pour ne pas casser les players.  
-**Amendement :** redirections automatiques (JS / meta après `didFinish`) → alerte « Y aller / Rester ici » (`blockAutomaticRedirects`, défaut ON). Chaîne HTTP 30x d’un chargement utilisateur autorisée jusqu’à fin de navigation.  
-**Date :** 2026-10-01
+**Décision :** mono-onglet durci via `PopupGuard` — `window.open` neutralisé (JS), `target=_blank` **toujours cancel** en navigation (pas de vol de vue), `createWebView` n’ouvre in-place que lien **utilisateur + même site** ; cross-site (pubs) ignoré. Redirections auto **cross-site** : **blocage silencieux** (bandeau compteur), **jamais** d’alerte modale (spam stream sites). Même site / chaîne HTTP user : autorisé. Alertes/confirm/prompt JS avalés si popups ON. `WKContentRuleList` (`adblock-rules.json` v2). Headless CLI : mêmes garde-fous. Réglages **Paramètres → Navigateur**, défaut ON.  
+Agent Cursor : règle `.cursor/rules/browser-no-ad-tabs.mdc`.  
+
+**Amendement (2026-10-17) :** plus d’alerte modale « Y aller / Rester ici » (spam). `blockAutomaticRedirects` = blocage **silencieux** cross-site + bandeau. Chaîne HTTP 30x d’un chargement utilisateur autorisée jusqu’à `didFinish`.  
+**Date :** 2026-10-01 / amendé 2026-10-17
 
 ### D015 — Auto-retry réseau (comportement par défaut)
 **Décision :** un échec 429/502/503/504 (ou « segments en échec » après retries) **ne marque plus le job en failed définitif** d’emblée.  
@@ -119,10 +121,16 @@ La relance manuelle reste disponible ; elle ne doit plus être le chemin nominal
 - DB dédiée `Application Support/OpenStream/cli-store/` (flag `--shared-db` pour partager l’app)  
 - Contrat agent : JSON Lines stdout + exit codes documentés dans `OpenStreamCLI/README.md` (playbook agent)  
 - Phase B : `fetch` via WKWebView offscreen (`NSApplication` accessory) ; titres via `PageTitleResolver` (`--title` prioritaire)  
-- `season` : énumération (1) catalogue FS `/data/eps_{newsid}.txt` préf. vidzy, (2) pattern `/tv/{id}/s/{S}/e/{E}`, (3) DOM ; défaut list-only ; `--auto-download` séquentiel + export Jellyfin série ; pick HLS vidéo vs `index-a1`  
+- `season` : résolution page via favoris (`SeasonResolver` : bookmark titre → sinon search DLE sites favoris) puis énumération (1) catalogue FS `/data/eps_{newsid}.txt` préf. vidzy, (2) pattern `/tv/{id}/s/{S}/e/{E}`, (3) DOM ; défaut list-only ; `--auto-download` séquentiel + export Jellyfin série ; pick HLS vidéo vs `index-a1`  
+- `flix` : digest nouveautés hubs favoris via RSS DLE (`FlixService` / `flix_seen.json`) — propose, n’auto-télécharge pas ; `pick --enqueue` → `season`/`fetch`
+
 - Install agent ollamac : `~/.local/opt/openstream-cli/` + symlink `~/.local/bin/openstream-cli` (user `rosito`) ; exports défaut `~/Downloads/OpenStream`  
 
 - Inbox `--via-app` conservée comme pont optionnel vers la GUI  
+**Date :** 2026-10-17
+
+### D019 — Flix (digest CLI)
+**Décision :** sous-commande `flix` native (scan/digest/bootstrap/seen/pick). Source V1 = RSS `{origin}/engine/rss.php` ; normalisation host → favori ; hubs sans RSS = skip. Seen à la proposition (`--mark-seen`), pas au download.  
 **Date :** 2026-10-17
 
 ---
@@ -193,11 +201,15 @@ La relance manuelle reste disponible ; elle ne doit plus être le chemin nominal
 | 2026-09-08 | D013 v4 : Lanterns = HLS TS démuxé ; mux via playlist.m3u8 locaux (concat TS cassait le sync) |
 | 2026-09-08 | Validé utilisateur : S01E04-10.mp4 sync A/V parfait (mux m3u8 locaux) |
 | 2026-10-01 | D014 : bloqueur popups (WKUIDelegate) + adblock (WKContentRuleList) ; toggles Paramètres |
+| 2026-10-17 | D014+ : `PopupGuard` — blank cross-site bloqué ; `window.open` null ; headless + règle Cursor |
+| 2026-10-17 | D014++ : redirects cross-site = silence (bandeau) ; plus de modal spam ; JS alert/prompt avalés |
+| 2026-10-17 | D019 : `flix` digest RSS hubs favoris (scan/digest/pick) |
 | 2026-10-01 | D015 : auto-retry job 429/503 (cooldown + bootstrap) — relance manuelle plus le chemin nominal |
 | 2026-10-05 | D016 : MP4 progressif via URLSession.download (plus de data(for:) en RAM) |
 | 2026-10-17 | D017 : FFmpeg statique embarqué (Helpers) — plus de casse via brew/x265 |
 | 2026-10-17 | D018 : openstream-cli headless (download/fetch/JSON agent) |
 | 2026-10-17 | D018+ : `season` (FS eps_*.txt / MOVIX / DOM) ; pick HLS vidéo ; deploy ollamac ; doc agent |
+| 2026-10-17 | `SeasonResolver` : `season 'Tulsa King'` via favoris/search sites — plus besoin d’URL page |
 | 2026-10-01 | Segments HLS « .image » : faux en-tête PNG devant MPEG-TS (TikTok CDN) — strip + rename .ts avant FFmpeg |
 | 2026-10-01 | Bug suite : download renommait en `.ts` mais playlist gardait `.image` — reconcile URIs avant mux |
 | 2026-10-01 | Fix assemble .image : planifier déjà en `.ts`, réécrire playlist depuis fichiers réels, re-DL si segments manquants |

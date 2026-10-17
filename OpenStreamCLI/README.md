@@ -61,40 +61,37 @@ rsync -az -e 'ssh -o BatchMode=yes' \
 | Page web → découvrir le flux | `fetch <pageURL>` |
 | Seulement lister les flux d’une page | `fetch … --detect-only` |
 | Page → premier flux → export | `fetch … --auto-download` |
-| Lister les épisodes d’une saison | `season <pageURL>` (défaut list-only) |
+| Lister les épisodes d’une saison | `season <showName\|pageURL>` (défaut list-only) |
 | Télécharger toute une saison | `season … --auto-download` |
+| Nouveautés des hubs favoris (RSS) | `flix digest` / `flix scan` |
+| Choisir une entrée du digest | `flix pick 1` ou `flix pick 1,3 --enqueue` |
 | Suivre / attendre / annuler un job | `status` / `wait` / `cancel` |
 | Déclencher l’app GUI (si ouverte) | `--via-app` ou `ping` / `open` |
 
-Règle simple : **URL fichier média → `download`**. **URL page HTML → `fetch`**. **Page série/saison → `season`**.
+Règle simple : **URL fichier média → `download`**. **URL page HTML → `fetch`**. **Nom de série ou page saison → `season`**. **Hubs / « quoi de neuf ? » → `flix`** (pas `fetch` sur la homepage).
 
-### NL agent (Intendant) — titres vs favoris
+### NL agent (Intendant) — résolution via favoris
 
-Les favoris OpenStream sont souvent des **sites** (FS26, RizMov…), pas des titres de séries.
+`season` **cherche tout seul** : (1) favori page dont le titre matche la série/saison, sinon (2) recherche DLE sur les **sites** favoris (FS26…). L’agent ne doit **pas** demander l’URL à l’utilisateur.
 
-| Message utilisateur | Parsing attendu | Action |
-|---------------------|-----------------|--------|
-| « Télécharge la saison de Tulsa King » | `show=Tulsa King`, mode=`season` — **pas** la phrase entière dans `--title` | Si pas de favori page → chercher sur le site favori (FS26) **ou** demander le lien page saison |
-| Lien `…/newsid=15112864` | page saison | `season <url> --show 'Tulsa King' --season 1` |
-
-Mauvaise commande (ne marche pas) :
+| Message utilisateur | Commande | Comportement |
+|---------------------|----------|--------------|
+| « Télécharge la saison de Tulsa King » | `season 'Tulsa King' --season 1 --json` | Favoris → page saison → liste / download |
+| Lien `…/newsid=…` déjà connu | `season <url> --show 'Tulsa King' --season 1` | Skip résolution, énumère directement |
 
 ```bash
-# --title = phrase NL → matching favoris impossible
+# Cas nominal Intendant (pas d’URL)
+openstream-cli season 'Tulsa King' --season 1 --json
+# équivalent :
+openstream-cli season --show 'Tulsa King' --season 1 --json --auto-download
+```
+
+Mauvaise commande :
+
+```bash
+# --title = phrase NL → ne sert pas à la résolution favoris
 openstream-cli season … --title 'Telecharge la saison de Tulsa King'
 ```
-
-Bonne commande (validée live ollamac) :
-
-```bash
-# 1) résoudre via recherche FS26 → newsid saison 1
-# 2) lister / télécharger
-openstream-cli season 'https://fs26.lol/index.php?newsid=15112864' \
-  --json --show 'Tulsa King' --season 1
-```
-
-Message type si seul le titre est connu et absent des favoris :  
-*« Tulsa King n’est pas dans les favoris (sites : FS26, …). Envoie le lien page saison, ou je cherche sur FS26. »*
 
 ---
 
@@ -103,7 +100,8 @@ Message type si seul le titre est connu et absent des favoris :
 ```
 openstream-cli download <url> [options]
 openstream-cli fetch <pageURL> [--detect-only|--auto-download] [options]
-openstream-cli season <pageURL> [--list-only|--auto-download] [--show NAME] [--season N] [options]
+openstream-cli season <pageURL|showName> [--list-only|--auto-download] [--show NAME] [--season N] [options]
+openstream-cli flix scan|digest|bootstrap|seen|pick … [options]
 openstream-cli status [jobId]
 openstream-cli list
 openstream-cli wait <jobId>
@@ -111,11 +109,78 @@ openstream-cli cancel <jobId>
 openstream-cli ping | open <url> | inbox | help
 ```
 
+### Flix — digest nouveautés (hubs favoris)
+
+Scanne le RSS DLE (`/engine/rss.php`) des **homepages** en favoris (ex. FS26). **Propose** un digest numéroté — **n’auto-télécharge pas**.
+
+```
+openstream-cli flix scan [--json] [--max N] [--since ISO|Nd]
+openstream-cli flix digest [--json] [--max N] [--mark-seen]
+openstream-cli flix bootstrap [--json]
+openstream-cli flix seen list|clear [--json]
+openstream-cli flix pick <n|n,m> [--enqueue] [--json]
+```
+
+| Commande | Effet |
+|----------|--------|
+| `scan` | Liste brute RSS (aucun side-effect `seen`) |
+| `digest` | Top N non-vus (défaut **8**) ; écrit `flix_last_digest.json` ; 1er run (`seen` vide) = **bootstrap auto** → `count: 0` |
+| `bootstrap` | Marque le head RSS actuel comme vu (évite le dump initial) |
+| `seen list\|clear` | Inspecte / remet à zéro `flix_seen.json` |
+| `pick 1,3` | Résout depuis le **dernier digest** → `show`/`season` ou `url` |
+| `pick … --enqueue` | Sous-processus `season … --auto-download` ou `fetch … --auto-download` |
+
+**Favoris :** homepages uniquement (pages `newsid=` ignorées comme hub, host conservé).  
+**Liens RSS :** host réécrit vers le favori (`fs20.lol` → `fs26.lol`).  
+**Hubs sans RSS** (Interra, Rizmov…) → warning **stderr**, skip ; exit 0 si au moins un hub OK.  
+**État :** `~/Library/Application Support/OpenStream/flix_seen.json` + `flix_last_digest.json`.  
+**Piège :** ne pas `fetch https://fs26.lol/` pour lister un catalogue → timeout média (exit 7).
+
+#### JSON Flix (`--json`) — un objet stdout (pas JSON Lines)
+
+`digest` :
+
+```json
+{
+  "updated": "2026-10-17T14:54:00Z",
+  "count": 2,
+  "items": {
+    "1": {
+      "n": 1,
+      "id": "https://fs26.lol/index.php?newsid=15140996",
+      "url": "https://fs26.lol/index.php?newsid=15140996",
+      "title": "Tulsa King - Saison 4",
+      "show": "Tulsa King",
+      "season": 4,
+      "mode": "season",
+      "display": "Tulsa King — S4",
+      "source": "FS26",
+      "pub_date": "Sat, 17 Oct 2026 03:17:57 +0200"
+    }
+  }
+}
+```
+
+`scan` : `{ "count", "hubs_ok", "hubs_skipped", "items": [ … ] }`  
+`pick` (sans `--enqueue`) : tableau d’items.  
+`mode` : `season` si titre `… - Saison N`, sinon `fetch`.
+
+Texte humain (sans `--json`) si `count > 0` :
+
+```text
+Flix — 2 nouveautés
+1. Tulsa King — S4 (FS26)
+2. MobLand — S2 (FS26)
+Réponds 1 / 1,3 ou season « Show » --season N
+```
+
+Si `count: 0` : stdout vide (silence), exit 0.
+
 ### Options communes
 
 | Flag | Défaut | Rôle |
 |------|--------|------|
-| `--json` | off | **Obligatoire pour un agent** — une ligne JSON / événement |
+| `--json` | off | **Obligatoire pour un agent** — JSON Lines (`download`/`fetch`/`season`) ou objet JSON (`flix`) |
 | `--cookie <header>` | — | Cookie HTTP brut (`a=1; b=2`) |
 | `--referer <url>` | — | Header Referer (souvent la page watch) |
 | `--user-agent <ua>` | UA OpenStream | User-Agent |
@@ -129,6 +194,10 @@ openstream-cli ping | open <url> | inbox | help
 | `--quality best\|ask` | `best` | Préférence HLS |
 | `--shared-db` | off | DB partagée avec l’app GUI |
 | `--via-app` | off | Écrit l’inbox GUI au lieu d’exécuter |
+| `--max <n>` | `8` (`digest`) | Plafond items (`flix scan` / `digest`) |
+| `--since <ISO\|Nd>` | — | Filtre `scan` (ex. `7d`, `2026-10-01T00:00:00Z`) |
+| `--mark-seen` | off | `flix digest` : marque les items proposés comme vus |
+| `--enqueue` | off | `flix pick` : lance season/fetch auto-download |
 
 ---
 
@@ -283,10 +352,13 @@ Ne pas mélanger CLI et GUI sans `--shared-db`.
 ### D — Saison (liste)
 
 ```bash
-# French Stream (ex. Tulsa King S1 sur fs26)
+# Via favoris (Intendant) — pas d’URL
+"$CLI" season 'Tulsa King' --season 1 --json
+# → info (resolved) → 9× episode → season_done
+
+# URL page saison déjà connue
 "$CLI" season 'https://fs26.lol/index.php?newsid=15112864' \
   --json --show 'Tulsa King' --season 1
-# → 9× event=episode (url = embed vidzy) → season_done
 
 # MOVIX-like
 "$CLI" season 'https://movix.example/watch/tv/1668/s/1/e/1' \
@@ -304,12 +376,11 @@ Défaut = list-only.
 ### E — Saison (téléchargement séquentiel)
 
 ```bash
-"$CLI" season 'https://fs26.lol/index.php?newsid=15112864' \
+"$CLI" season 'Tulsa King' --season 1 \
   --auto-download --json \
-  --show 'Tulsa King' --season 1 \
   --out ~/Downloads/OpenStream \
   --timeout 90
-# episode → fetch embed → detected → queued → … → season_done
+# info → episode → fetch embed → detected → queued → … → season_done
 # Fichiers : ~/Downloads/OpenStream/Tulsa King/Saison 01/S01E0x.mp4
 ```
 
@@ -318,17 +389,39 @@ Défaut = list-only.
 ```
 if url looks like media (.m3u8|.mpd|.mp4|…):
     run download --json [--referer] [--title] [--cookie]
+else if intent is "what's new" / digest / nouveautés:
+    run flix digest --json [--mark-seen]
+    # user replies 1 / 1,3 → flix pick 1,3 [--enqueue --json]
 else if intent is whole season:
-    run season page --json --show NAME [--season N]           # list
-    # or: season page --auto-download --json --show NAME
+    run season SHOW_NAME --json --season N                  # list via favoris
+    # or: season SHOW_NAME --auto-download --json --season N
 else:
     run fetch --detect-only --json --timeout 60
     if exit == 7: retry with larger timeout or ask user
     pick first (or best) detected.url
     run download detected.url --json --referer page --title (flags.title or detected.title)
-parse stdout lines as JSON
+parse stdout (JSON Lines for download/fetch/season ; single object for flix)
 on completed: return path
 on failed: surface message + exit code
+```
+
+### G — Flix (digest)
+
+```bash
+# Premier déploiement / nouveau Mac : seed without spam
+"$CLI" flix bootstrap --json
+# → {"marked":10}
+
+# Cron agent (ex. mar/ven) — nouveautés seulement
+"$CLI" flix digest --json --mark-seen
+# → {"count":0,...}  ou  items 1..N
+
+# L’utilisateur répond « 1 » ou « 1,3 »
+"$CLI" flix pick 1 --json
+# → [{"mode":"season","show":"Tulsa King","season":4,"url":"…"}]
+
+"$CLI" flix pick 1 --enqueue --json
+# → season 'Tulsa King' --season 4 --auto-download --json
 ```
 
 ---

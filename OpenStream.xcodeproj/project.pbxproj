@@ -13,8 +13,10 @@
 		07923AB7269EB76B83A28F32 /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 8C01CFD1B26F228B50669741 /* Assets.xcassets */; };
 		09548E15AA8A83245B5E596F /* DownloadHistoryStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = DE08B9380D52F51A20B60045 /* DownloadHistoryStore.swift */; };
 		0AF0D501350DC018E2B74318 /* DownloadQueue.swift in Sources */ = {isa = PBXBuildFile; fileRef = 630DE0061E069737A2FC4F43 /* DownloadQueue.swift */; };
+		0B238DDCA83ED9BCE3A6518F /* SeasonResolver.swift in Sources */ = {isa = PBXBuildFile; fileRef = E0D04593BCBB0F0E47DF9EF8 /* SeasonResolver.swift */; };
 		0BACC0A82ACB2540C63AEC13 /* MediaAssemblerTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8F1E05609C1F927238E6DF7E /* MediaAssemblerTests.swift */; };
 		0C756495229C0900A4DE3328 /* MediaCatalog.swift in Sources */ = {isa = PBXBuildFile; fileRef = B2FF05212D30F51388BB0D31 /* MediaCatalog.swift */; };
+		0DC16CBEFE598143FD060F07 /* PopupGuardTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9BB2AE76F8924CAFC69E0239 /* PopupGuardTests.swift */; };
 		0E71B6A371BE76BD258A38BF /* MediaSegmentNormalizer.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5114D503BB818154C5E287B4 /* MediaSegmentNormalizer.swift */; };
 		1070F657E86D582E402BA4BE /* MediaURLHeuristics.swift in Sources */ = {isa = PBXBuildFile; fileRef = ACA90EC5992E7D608A33C3A2 /* MediaURLHeuristics.swift */; };
 		11D948F24EA6EEA5CE6ACFB0 /* MediaDetector.swift in Sources */ = {isa = PBXBuildFile; fileRef = B0CFE3D73DFAD0780FCDB50E /* MediaDetector.swift */; };
@@ -24,6 +26,7 @@
 		1CFAC25F9A7555C0D9B55048 /* SettingsCore.swift in Sources */ = {isa = PBXBuildFile; fileRef = 144F3666DC7B750EB3268323 /* SettingsCore.swift */; };
 		1D336508CFB537C38796B922 /* MediaModels.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9624EB40B1AA1F1CF9238AA6 /* MediaModels.swift */; };
 		1E3263ED909747F244C90D78 /* AppState.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1EFC814057033E005504B690 /* AppState.swift */; };
+		272D26C19DD252096C1002E2 /* FlixService.swift in Sources */ = {isa = PBXBuildFile; fileRef = BEA30A2010CEB2F08A13E3B8 /* FlixService.swift */; };
 		274A84374CF3DCC22E5A9F2C /* FFmpegSetup.swift in Sources */ = {isa = PBXBuildFile; fileRef = 760544DE4EB40DF2295BAEDA /* FFmpegSetup.swift */; };
 		279FCD6BEC1FCCC744D6F5BA /* DASHParserTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = FAE5845ECCE0D3DCA8E7631D /* DASHParserTests.swift */; };
 		28C9AB2214A54155F99350DE /* BrowserController.swift in Sources */ = {isa = PBXBuildFile; fileRef = B0644C5F41CE5CF7B9A89320 /* BrowserController.swift */; };
@@ -40,6 +43,7 @@
 		37BE0A5BE8ABBAECA92A3643 /* ContentBlockerTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 60B068A8BADBD76CD455C7BA /* ContentBlockerTests.swift */; };
 		37C7A6D6C21005EC39AA8AFE /* SystemVPNMonitorTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = CA340E7817E21C45A9041194 /* SystemVPNMonitorTests.swift */; };
 		37FCA4E7D4B74B8CEBF6F0B7 /* PageTitleResolver.swift in Sources */ = {isa = PBXBuildFile; fileRef = 10DEBAE18781F083C1FA7E68 /* PageTitleResolver.swift */; };
+		38022D2BF4CEB523B3F78EF2 /* FlixRSS.swift in Sources */ = {isa = PBXBuildFile; fileRef = BD2A93F6286242241121EDA3 /* FlixRSS.swift */; };
 		39FBC8894E8F595B1D0BAB89 /* WeakScriptMessageHandler.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6AD2FE365D34049250983D0D /* WeakScriptMessageHandler.swift */; };
 		3C3610F4E5912AD527938659 /* PLUGIN_AUTHOR.md in Resources */ = {isa = PBXBuildFile; fileRef = 7AB633D5290A2F1331B0F587 /* PLUGIN_AUTHOR.md */; };
 		3E21E81FD36FFF14C1E4D5DC /* SystemVPNMonitor.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9A54E79D28B72E69D2D14352 /* SystemVPNMonitor.swift */; };
@@ -48,6 +52,7 @@
 		4413D6713CCADB3DC69B1C57 /* FFmpegWrapper.swift in Sources */ = {isa = PBXBuildFile; fileRef = 669C70BF98863653F60DFF7A /* FFmpegWrapper.swift */; };
 		45B09A2766956DFE33420084 /* MediaDetector.swift in Sources */ = {isa = PBXBuildFile; fileRef = B0CFE3D73DFAD0780FCDB50E /* MediaDetector.swift */; };
 		4BE5040B97444BB7D8897FDA /* NetworkMediaCandidate.swift in Sources */ = {isa = PBXBuildFile; fileRef = 939C8AAA2A338D282E0C903E /* NetworkMediaCandidate.swift */; };
+		506451D2A77E1E116FCAB220 /* PopupGuard.swift in Sources */ = {isa = PBXBuildFile; fileRef = B1FD352D68796B9564BDBE1F /* PopupGuard.swift */; };
 		56345893025143102EE31384 /* TestFixtures.swift in Sources */ = {isa = PBXBuildFile; fileRef = AAA90A98F9C9746603ECD47F /* TestFixtures.swift */; };
 		576F5D4CB80C8B39C5AE4A73 /* MediaCatalog.swift in Sources */ = {isa = PBXBuildFile; fileRef = B2FF05212D30F51388BB0D31 /* MediaCatalog.swift */; };
 		5A79B636E4336A08F691328A /* MediaModels.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9624EB40B1AA1F1CF9238AA6 /* MediaModels.swift */; };
@@ -59,9 +64,13 @@
 		6379E85378B8B11CEE1EA594 /* main.swift in Sources */ = {isa = PBXBuildFile; fileRef = 720E246C9D42A9007AE56B78 /* main.swift */; };
 		652AA3C57ED4E7F5CCA960CB /* CookieBridge.swift in Sources */ = {isa = PBXBuildFile; fileRef = 70EC3D6F101412B3291F7791 /* CookieBridge.swift */; };
 		68170972AF112CF36649ACE2 /* MediaDownloadPlanner.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4FE45550FB79659F765953CA /* MediaDownloadPlanner.swift */; };
+		6ABD1339E9A9EED77A8AFF63 /* FlixRSS.swift in Sources */ = {isa = PBXBuildFile; fileRef = BD2A93F6286242241121EDA3 /* FlixRSS.swift */; };
 		6C55B7A641AFA40D10CB98A2 /* HLSPlaylistCompleter.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9230D4E1747263B9E8F893D7 /* HLSPlaylistCompleter.swift */; };
 		712952A17384C3AA73CD79ED /* FFmpegSetup.swift in Sources */ = {isa = PBXBuildFile; fileRef = 760544DE4EB40DF2295BAEDA /* FFmpegSetup.swift */; };
+		7215EBA54E5ED31E8387644D /* FlixStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = D396E7318F88DFB637EDF9A6 /* FlixStore.swift */; };
+		72B9E8FE1BEB2FF1ECE63E4B /* FlixModels.swift in Sources */ = {isa = PBXBuildFile; fileRef = B7931804349E88625E20F003 /* FlixModels.swift */; };
 		7475C0BE4FBD3643443081F2 /* PluginManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = FE0456C0B88EC06E23F2DB76 /* PluginManager.swift */; };
+		7A147C4541FC6875E6054EE5 /* FlixStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = D396E7318F88DFB637EDF9A6 /* FlixStore.swift */; };
 		7BF93D5DE0659F8A3769B9FA /* HLSPlaylistCompleter.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9230D4E1747263B9E8F893D7 /* HLSPlaylistCompleter.swift */; };
 		82B32D662E8DC3C2A3C53FE0 /* DownloadJobStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = CF1C47C23AFF9B6F02881E20 /* DownloadJobStore.swift */; };
 		8465E6A93C714902A3083E8D /* MediaSegmentNormalizer.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5114D503BB818154C5E287B4 /* MediaSegmentNormalizer.swift */; };
@@ -70,11 +79,15 @@
 		91CE48751FF9BC85F97D2EC0 /* MediaAssembler.swift in Sources */ = {isa = PBXBuildFile; fileRef = C383B31452D46222F12BF157 /* MediaAssembler.swift */; };
 		953D477CEEC38B2DC57A6C60 /* AppPreferences.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5ADA778713EC1EB81354AF00 /* AppPreferences.swift */; };
 		95CB8C96B25F0C9D6C8BB3AE /* ExportNaming.swift in Sources */ = {isa = PBXBuildFile; fileRef = 99E5F1D2D8A0879B40027A42 /* ExportNaming.swift */; };
+		9672C5922F29D5852FBF6F85 /* FlixTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 502D9096DE7ADA4A084EC41F /* FlixTests.swift */; };
 		97F0411DB7319C766F0B0B1F /* ContentBlocker.swift in Sources */ = {isa = PBXBuildFile; fileRef = 765F5829AF83BFE43CE0DFA9 /* ContentBlocker.swift */; };
 		98895EE7907CBD736ECE310F /* FFmpegSetupTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 574760762F2331300DCF0B59 /* FFmpegSetupTests.swift */; };
 		9BD1DD5E076D6509868FCE7D /* WeakScriptMessageHandler.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6AD2FE365D34049250983D0D /* WeakScriptMessageHandler.swift */; };
 		9C0A7D72EED22C2DEC42E26B /* MediaSegmentNormalizerTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1EEF4FBDBBCB0983B28FD48C /* MediaSegmentNormalizerTests.swift */; };
+		9C34684B801EC8AAFC48A88C /* FlixService.swift in Sources */ = {isa = PBXBuildFile; fileRef = BEA30A2010CEB2F08A13E3B8 /* FlixService.swift */; };
 		A2CD12ED79B87CCF8AB02896 /* OpenStreamApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = 754C3DEBFD1AC866B7369ECA /* OpenStreamApp.swift */; };
+		A469F42C0AA782ADD767A2A0 /* PopupGuard.swift in Sources */ = {isa = PBXBuildFile; fileRef = B1FD352D68796B9564BDBE1F /* PopupGuard.swift */; };
+		A93F1F9B56F454C291A05907 /* SeasonResolver.swift in Sources */ = {isa = PBXBuildFile; fileRef = E0D04593BCBB0F0E47DF9EF8 /* SeasonResolver.swift */; };
 		AB8B545716FDCB999BEFA99F /* ExportNaming.swift in Sources */ = {isa = PBXBuildFile; fileRef = 99E5F1D2D8A0879B40027A42 /* ExportNaming.swift */; };
 		AFCA4237BEB4998F6DECD568 /* AVSyncSheet.swift in Sources */ = {isa = PBXBuildFile; fileRef = 513361614770D542066D14E9 /* AVSyncSheet.swift */; };
 		B5F0897D4F9AE2AE4B4F3A5B /* AgentJSON.swift in Sources */ = {isa = PBXBuildFile; fileRef = C4B26750C55534C7F6A38748 /* AgentJSON.swift */; };
@@ -83,6 +96,7 @@
 		BBD083617C920D0CD45B5A35 /* PluginManagerTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 56193FB8D646167E10AFE375 /* PluginManagerTests.swift */; };
 		BBF7915622254F8C94FB70C3 /* BookmarkStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = D2CBE84C9F9296FB43334A83 /* BookmarkStore.swift */; };
 		C4DE998872881E86B59993CD /* Helpers in Resources */ = {isa = PBXBuildFile; fileRef = 6C67609BEE8D86DE1A8D6836 /* Helpers */; };
+		C74D8EE290A4DC0EE334E83A /* SeasonResolverTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4630803674CF51E5AF232775 /* SeasonResolverTests.swift */; };
 		CE38F58F3D6BB4BA387CD68A /* DownloadModels.swift in Sources */ = {isa = PBXBuildFile; fileRef = D5C8E30886C8F6CE15E2A278 /* DownloadModels.swift */; };
 		CF47E8F70A9A1F6C4F01997F /* ProductivityTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2F6E06C3F4F41D261A9439DD /* ProductivityTests.swift */; };
 		D242744C07B5D39DFE41B1F3 /* NetworkObserver.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2D40937A5A4546182A51C711 /* NetworkObserver.swift */; };
@@ -98,6 +112,7 @@
 		EDCAFE589CAFFF9F1A310044 /* DASHParser.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5573871D48CC4F26742DE2B2 /* DASHParser.swift */; };
 		F26D1E8A7C112E700EAFA891 /* PageTitleResolverTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8B0B5C9DB13A438C1FB94C00 /* PageTitleResolverTests.swift */; };
 		F7CDEFDCCF6161B8A5680232 /* BookmarkStoreTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8DE19E32C6F321E12F1FC75D /* BookmarkStoreTests.swift */; };
+		F8207CD53473A8DC1E1DC4D1 /* FlixModels.swift in Sources */ = {isa = PBXBuildFile; fileRef = B7931804349E88625E20F003 /* FlixModels.swift */; };
 		FEAFFD7459CDC5C62CE5306B /* MediaURLHeuristics.swift in Sources */ = {isa = PBXBuildFile; fileRef = ACA90EC5992E7D608A33C3A2 /* MediaURLHeuristics.swift */; };
 		FF0381FF3691332D1DA08075 /* AppLog.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0A68206BB8B758A1A419860A /* AppLog.swift */; };
 /* End PBXBuildFile section */
@@ -124,10 +139,12 @@
 		2F6E06C3F4F41D261A9439DD /* ProductivityTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ProductivityTests.swift; sourceTree = "<group>"; };
 		3D4CAB1FC70CC2B2C5EF87B6 /* HeadlessDownloadService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HeadlessDownloadService.swift; sourceTree = "<group>"; };
 		43755994A0B06560AEC4822E /* MediaURLHeuristicsTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MediaURLHeuristicsTests.swift; sourceTree = "<group>"; };
+		4630803674CF51E5AF232775 /* SeasonResolverTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SeasonResolverTests.swift; sourceTree = "<group>"; };
 		46B3B8E1DCE729A57E7CB94F /* HLSParserTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HLSParserTests.swift; sourceTree = "<group>"; };
 		4A1DFC6BBAF999F81F66932A /* SettingsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SettingsView.swift; sourceTree = "<group>"; };
 		4EF4C0E36E4E67DE28400AD8 /* EpisodeEnumeratorTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = EpisodeEnumeratorTests.swift; sourceTree = "<group>"; };
 		4FE45550FB79659F765953CA /* MediaDownloadPlanner.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MediaDownloadPlanner.swift; sourceTree = "<group>"; };
+		502D9096DE7ADA4A084EC41F /* FlixTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FlixTests.swift; sourceTree = "<group>"; };
 		5114D503BB818154C5E287B4 /* MediaSegmentNormalizer.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MediaSegmentNormalizer.swift; sourceTree = "<group>"; };
 		513361614770D542066D14E9 /* AVSyncSheet.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AVSyncSheet.swift; sourceTree = "<group>"; };
 		53A46302BF8381E88E2213C9 /* OpenStreamTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = OpenStreamTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
@@ -163,14 +180,19 @@
 		97749BA2E639983C00C20F52 /* ContentView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ContentView.swift; sourceTree = "<group>"; };
 		99E5F1D2D8A0879B40027A42 /* ExportNaming.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ExportNaming.swift; sourceTree = "<group>"; };
 		9A54E79D28B72E69D2D14352 /* SystemVPNMonitor.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SystemVPNMonitor.swift; sourceTree = "<group>"; };
+		9BB2AE76F8924CAFC69E0239 /* PopupGuardTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PopupGuardTests.swift; sourceTree = "<group>"; };
 		9F4DCBFFC965CB4C2E3A4C3E /* EpisodeEnumerator.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = EpisodeEnumerator.swift; sourceTree = "<group>"; };
 		AAA90A98F9C9746603ECD47F /* TestFixtures.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TestFixtures.swift; sourceTree = "<group>"; };
 		ACA90EC5992E7D608A33C3A2 /* MediaURLHeuristics.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MediaURLHeuristics.swift; sourceTree = "<group>"; };
 		ADB449D116D60F79B6A8FB92 /* FFmpegSetupBanner.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FFmpegSetupBanner.swift; sourceTree = "<group>"; };
 		B0644C5F41CE5CF7B9A89320 /* BrowserController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BrowserController.swift; sourceTree = "<group>"; };
 		B0CFE3D73DFAD0780FCDB50E /* MediaDetector.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MediaDetector.swift; sourceTree = "<group>"; };
+		B1FD352D68796B9564BDBE1F /* PopupGuard.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PopupGuard.swift; sourceTree = "<group>"; };
 		B2FF05212D30F51388BB0D31 /* MediaCatalog.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MediaCatalog.swift; sourceTree = "<group>"; };
+		B7931804349E88625E20F003 /* FlixModels.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FlixModels.swift; sourceTree = "<group>"; };
 		BC9C74CF9FC17DA5CBC9AD7A /* Fixtures */ = {isa = PBXFileReference; lastKnownFileType = folder; path = Fixtures; sourceTree = SOURCE_ROOT; };
+		BD2A93F6286242241121EDA3 /* FlixRSS.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FlixRSS.swift; sourceTree = "<group>"; };
+		BEA30A2010CEB2F08A13E3B8 /* FlixService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FlixService.swift; sourceTree = "<group>"; };
 		C0F230A7295D2766CBE22085 /* OpenStreamCLI */ = {isa = PBXFileReference; includeInIndex = 0; path = OpenStreamCLI; sourceTree = BUILT_PRODUCTS_DIR; };
 		C2A5485A1F40F803E9B5D3A3 /* DownloadManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DownloadManager.swift; sourceTree = "<group>"; };
 		C383B31452D46222F12BF157 /* MediaAssembler.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MediaAssembler.swift; sourceTree = "<group>"; };
@@ -179,8 +201,10 @@
 		CA340E7817E21C45A9041194 /* SystemVPNMonitorTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SystemVPNMonitorTests.swift; sourceTree = "<group>"; };
 		CF1C47C23AFF9B6F02881E20 /* DownloadJobStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DownloadJobStore.swift; sourceTree = "<group>"; };
 		D2CBE84C9F9296FB43334A83 /* BookmarkStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BookmarkStore.swift; sourceTree = "<group>"; };
+		D396E7318F88DFB637EDF9A6 /* FlixStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FlixStore.swift; sourceTree = "<group>"; };
 		D5C8E30886C8F6CE15E2A278 /* DownloadModels.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DownloadModels.swift; sourceTree = "<group>"; };
 		DE08B9380D52F51A20B60045 /* DownloadHistoryStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DownloadHistoryStore.swift; sourceTree = "<group>"; };
+		E0D04593BCBB0F0E47DF9EF8 /* SeasonResolver.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SeasonResolver.swift; sourceTree = "<group>"; };
 		E0FEBC8FAC9B4E226CBD80B3 /* DownloadQueueTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DownloadQueueTests.swift; sourceTree = "<group>"; };
 		FAE5845ECCE0D3DCA8E7631D /* DASHParserTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DASHParserTests.swift; sourceTree = "<group>"; };
 		FE0456C0B88EC06E23F2DB76 /* PluginManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PluginManager.swift; sourceTree = "<group>"; };
@@ -307,13 +331,16 @@
 				4EF4C0E36E4E67DE28400AD8 /* EpisodeEnumeratorTests.swift */,
 				83CC6A0A5FA44E70F09E7ED3 /* ExportNamingTests.swift */,
 				574760762F2331300DCF0B59 /* FFmpegSetupTests.swift */,
+				502D9096DE7ADA4A084EC41F /* FlixTests.swift */,
 				46B3B8E1DCE729A57E7CB94F /* HLSParserTests.swift */,
 				8F1E05609C1F927238E6DF7E /* MediaAssemblerTests.swift */,
 				1EEF4FBDBBCB0983B28FD48C /* MediaSegmentNormalizerTests.swift */,
 				43755994A0B06560AEC4822E /* MediaURLHeuristicsTests.swift */,
 				8B0B5C9DB13A438C1FB94C00 /* PageTitleResolverTests.swift */,
 				56193FB8D646167E10AFE375 /* PluginManagerTests.swift */,
+				9BB2AE76F8924CAFC69E0239 /* PopupGuardTests.swift */,
 				2F6E06C3F4F41D261A9439DD /* ProductivityTests.swift */,
+				4630803674CF51E5AF232775 /* SeasonResolverTests.swift */,
 				CA340E7817E21C45A9041194 /* SystemVPNMonitorTests.swift */,
 				AAA90A98F9C9746603ECD47F /* TestFixtures.swift */,
 			);
@@ -350,8 +377,14 @@
 			children = (
 				C4B26750C55534C7F6A38748 /* AgentJSON.swift */,
 				9F4DCBFFC965CB4C2E3A4C3E /* EpisodeEnumerator.swift */,
+				B7931804349E88625E20F003 /* FlixModels.swift */,
+				BD2A93F6286242241121EDA3 /* FlixRSS.swift */,
+				BEA30A2010CEB2F08A13E3B8 /* FlixService.swift */,
+				D396E7318F88DFB637EDF9A6 /* FlixStore.swift */,
 				1A2AEBB6C9723914B0D7EA6A /* HeadlessBrowserSession.swift */,
 				3D4CAB1FC70CC2B2C5EF87B6 /* HeadlessDownloadService.swift */,
+				B1FD352D68796B9564BDBE1F /* PopupGuard.swift */,
+				E0D04593BCBB0F0E47DF9EF8 /* SeasonResolver.swift */,
 			);
 			path = OpenStreamCore;
 			sourceTree = "<group>";
@@ -600,6 +633,10 @@
 				95CB8C96B25F0C9D6C8BB3AE /* ExportNaming.swift in Sources */,
 				712952A17384C3AA73CD79ED /* FFmpegSetup.swift in Sources */,
 				8961E2A9E32C4F32C349017E /* FFmpegWrapper.swift in Sources */,
+				72B9E8FE1BEB2FF1ECE63E4B /* FlixModels.swift in Sources */,
+				6ABD1339E9A9EED77A8AFF63 /* FlixRSS.swift in Sources */,
+				9C34684B801EC8AAFC48A88C /* FlixService.swift in Sources */,
+				7A147C4541FC6875E6054EE5 /* FlixStore.swift in Sources */,
 				3769838013022C209BA75E98 /* HLSParser.swift in Sources */,
 				6C55B7A641AFA40D10CB98A2 /* HLSPlaylistCompleter.swift in Sources */,
 				2A034D52E4358C525C71201D /* HeadlessBrowserSession.swift in Sources */,
@@ -615,6 +652,8 @@
 				D242744C07B5D39DFE41B1F3 /* NetworkObserver.swift in Sources */,
 				37FCA4E7D4B74B8CEBF6F0B7 /* PageTitleResolver.swift in Sources */,
 				7475C0BE4FBD3643443081F2 /* PluginManager.swift in Sources */,
+				A469F42C0AA782ADD767A2A0 /* PopupGuard.swift in Sources */,
+				A93F1F9B56F454C291A05907 /* SeasonResolver.swift in Sources */,
 				2DD3A2398E4F9B0954079328 /* SettingsCore.swift in Sources */,
 				9BD1DD5E076D6509868FCE7D /* WeakScriptMessageHandler.swift in Sources */,
 				6379E85378B8B11CEE1EA594 /* main.swift in Sources */,
@@ -632,13 +671,16 @@
 				B6B3B72F6FBA959C0E2ACEA0 /* EpisodeEnumeratorTests.swift in Sources */,
 				2F627CBBA396B39953247F62 /* ExportNamingTests.swift in Sources */,
 				98895EE7907CBD736ECE310F /* FFmpegSetupTests.swift in Sources */,
+				9672C5922F29D5852FBF6F85 /* FlixTests.swift in Sources */,
 				B9A582932E9F7C7C001D6AA8 /* HLSParserTests.swift in Sources */,
 				0BACC0A82ACB2540C63AEC13 /* MediaAssemblerTests.swift in Sources */,
 				9C0A7D72EED22C2DEC42E26B /* MediaSegmentNormalizerTests.swift in Sources */,
 				11F62542122432D8BEF86A1E /* MediaURLHeuristicsTests.swift in Sources */,
 				F26D1E8A7C112E700EAFA891 /* PageTitleResolverTests.swift in Sources */,
 				BBD083617C920D0CD45B5A35 /* PluginManagerTests.swift in Sources */,
+				0DC16CBEFE598143FD060F07 /* PopupGuardTests.swift in Sources */,
 				CF47E8F70A9A1F6C4F01997F /* ProductivityTests.swift in Sources */,
+				C74D8EE290A4DC0EE334E83A /* SeasonResolverTests.swift in Sources */,
 				37C7A6D6C21005EC39AA8AFE /* SystemVPNMonitorTests.swift in Sources */,
 				56345893025143102EE31384 /* TestFixtures.swift in Sources */,
 			);
@@ -668,6 +710,10 @@
 				274A84374CF3DCC22E5A9F2C /* FFmpegSetup.swift in Sources */,
 				E6B783F9597C754E92BF643F /* FFmpegSetupBanner.swift in Sources */,
 				4413D6713CCADB3DC69B1C57 /* FFmpegWrapper.swift in Sources */,
+				F8207CD53473A8DC1E1DC4D1 /* FlixModels.swift in Sources */,
+				38022D2BF4CEB523B3F78EF2 /* FlixRSS.swift in Sources */,
+				272D26C19DD252096C1002E2 /* FlixService.swift in Sources */,
+				7215EBA54E5ED31E8387644D /* FlixStore.swift in Sources */,
 				2AA3DBD80F992A1B66F9F530 /* HLSParser.swift in Sources */,
 				7BF93D5DE0659F8A3769B9FA /* HLSPlaylistCompleter.swift in Sources */,
 				E09ACBA6ECE25982408DA7B0 /* MediaAssembler.swift in Sources */,
@@ -682,8 +728,10 @@
 				A2CD12ED79B87CCF8AB02896 /* OpenStreamApp.swift in Sources */,
 				62BECBD871E4F03A8073F7EF /* PageTitleResolver.swift in Sources */,
 				1CBD061A3026BE307EC4FEB6 /* PluginManager.swift in Sources */,
+				506451D2A77E1E116FCAB220 /* PopupGuard.swift in Sources */,
 				911D02956D60ED9A63C7D5D9 /* ProductivitySheets.swift in Sources */,
 				2DF0653F7BDF8BBBEC41AA0E /* ProductivitySupport.swift in Sources */,
+				0B238DDCA83ED9BCE3A6518F /* SeasonResolver.swift in Sources */,
 				1CFAC25F9A7555C0D9B55048 /* SettingsCore.swift in Sources */,
 				368610050A10B3002C4327E7 /* SettingsView.swift in Sources */,
 				3E21E81FD36FFF14C1E4D5DC /* SystemVPNMonitor.swift in Sources */,

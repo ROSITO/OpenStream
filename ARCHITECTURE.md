@@ -49,9 +49,10 @@ Flux de données principal : **navigation → observation réseau → détection
 Chemin agent (sans UI) :
 
 ```
-openstream-cli → OpenStreamCore (fetch/season/download)
+openstream-cli → OpenStreamCore (fetch/season/flix/download)
               → parsers / DownloadQueue / FFmpeg Helpers
               → JSON Lines (stdout) + exit code
+              → flix : RSS hubs favoris → digest JSON (pas de download auto)
 ```
 
 ---
@@ -80,6 +81,7 @@ openstream-cli → OpenStreamCore (fetch/season/download)
 
 ### Browser
 - **Rôle :** encapsuler `WKWebView` (navigation, historique page, user agent).
+- **Protection (D014) :** `PopupGuard` + adblock ; popups / blank cross-site / alertes JS bloqués ; redirects auto cross-site en **silence** (bandeau, pas de modal).
 - **Expose :** `BrowserNavigating`, événements de navigation.
 - **Ne fait pas :** détection média (délégation à Network Observer / scripts injectés).
 
@@ -142,8 +144,9 @@ openstream-cli → OpenStreamCore (fetch/season/download)
 - **Batch :** sheet multi-URLs — médias enfilés, pages ouvertes en séquence.
 - **Automation :** toggles réglages auto-enqueue par `ManifestKind`.
 - **CLI headless (D018) :** target `OpenStreamCLI` + façade `OpenStreamCore/`
-  - `download` / `fetch` / `season` / `status` / `wait` / `cancel`
+  - `download` / `fetch` / `season` / `flix` / `status` / `wait` / `cancel`
   - JSON Lines stdout (`AgentEvent`) + exit codes — contrat : `OpenStreamCLI/README.md`
+  - `flix` (D019) : RSS DLE des hubs favoris → `flix_seen.json` / digest numéroté → `pick` → `season`/`fetch`
   - `HeadlessBrowserSession` (WKWebView offscreen) pour détection page + titres
   - `EpisodeEnumerator` : catalogue French Stream `/data/eps_{newsid}.txt`, pattern MOVIX `/tv/{id}/s/{S}/e/{E}`, liens DOM
   - FFmpeg via `Helpers/` à côté du binaire (même stratégie D017)

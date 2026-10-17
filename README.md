@@ -2,7 +2,7 @@
 
 Application **macOS** native pour télécharger des flux vidéo **non protégés** (HLS, MPEG-DASH, MP4 progressif) depuis un navigateur intégré, puis les assembler en MP4.
 
-CLI headless **`openstream-cli`** pour agents IA : détection, saison, download/assemble — contrat JSON Lines dans [`OpenStreamCLI/README.md`](OpenStreamCLI/README.md).
+CLI headless **`openstream-cli`** pour agents IA : détection, saison, digest **flix**, download/assemble — contrat dans [`OpenStreamCLI/README.md`](OpenStreamCLI/README.md).
 
 > OpenStream **ne contourne pas** le DRM (Widevine, FairPlay, PlayReady) et ne déchiffre pas de flux chiffrés.
 
@@ -41,6 +41,10 @@ xcodebuild -scheme OpenStreamCLI -configuration Release -destination 'platform=m
 - App : DerivedData / `OpenStream.app`
 - CLI : DerivedData / `openstream-cli` (+ `Helpers/` à côté)
 
+## Navigateur intégré
+
+Paramètres → **Navigateur** (défaut ON) : popups / pubs / alertes JS bloqués ; redirections auto **cross-site** silencieuses (bandeau, pas de modal). Voir D014 dans [`MEMORY.md`](MEMORY.md).
+
 ## CLI / agent IA
 
 ```bash
@@ -52,15 +56,18 @@ CLI="$(ls -d "$HOME"/Library/Developer/Xcode/DerivedData/OpenStream-*/Build/Prod
 # Page → détecter un flux
 "$CLI" fetch 'https://…/watch' --detect-only --json --timeout 60
 
-# Saison (liste) — French Stream / MOVIX-like / DOM
+# Saison par nom (favoris) ou URL page
+"$CLI" season 'Tulsa King' --season 1 --json
 "$CLI" season 'https://fs26.lol/index.php?newsid=…' --json --show 'Tulsa King' --season 1
 
-# Saison complète
-"$CLI" season 'https://…' --auto-download --json --show 'Show' --season 1 --out ~/Downloads/OpenStream
+# Digest nouveautés (RSS hubs favoris) — pas de download auto
+"$CLI" flix bootstrap --json
+"$CLI" flix digest --json --mark-seen
+"$CLI" flix pick 1 --enqueue --json
 ```
 
 Exports par défaut : `~/Downloads/OpenStream` (override avec `--out`).  
-Playbook agent (JSON Lines, exit codes, titres, FS `eps_*.txt`) : **[`OpenStreamCLI/README.md`](OpenStreamCLI/README.md)**.
+Playbook agent (JSON Lines, `flix`, `season`, exit codes) : **[`OpenStreamCLI/README.md`](OpenStreamCLI/README.md)**.
 
 ## Docs produit
 
@@ -69,7 +76,7 @@ Playbook agent (JSON Lines, exit codes, titres, FS `eps_*.txt`) : **[`OpenStream
 | [`PRD_OpenStream.md`](PRD_OpenStream.md) | Vision / périmètre |
 | [`ARCHITECTURE.md`](ARCHITECTURE.md) | Modules et frontières |
 | [`ROADMAP.md`](ROADMAP.md) | Phases |
-| [`MEMORY.md`](MEMORY.md) | Décisions figées (D017 FFmpeg embarqué, D018 CLI…) |
+| [`MEMORY.md`](MEMORY.md) | Décisions figées (D014 navigateur, D018 CLI, D019 flix…) |
 | [`CLAUDE.md`](CLAUDE.md) | Règles agents |
 
 ## Licence
