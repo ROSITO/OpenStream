@@ -121,16 +121,16 @@ La relance manuelle reste disponible ; elle ne doit plus être le chemin nominal
 - DB dédiée `Application Support/OpenStream/cli-store/` (flag `--shared-db` pour partager l’app)  
 - Contrat agent : JSON Lines stdout + exit codes documentés dans `OpenStreamCLI/README.md` (playbook agent)  
 - Phase B : `fetch` via WKWebView offscreen (`NSApplication` accessory) ; titres via `PageTitleResolver` (`--title` prioritaire)  
-- `season` : résolution page via favoris (`SeasonResolver` : bookmark titre → sinon search DLE sites favoris) puis énumération (1) catalogue FS `/data/eps_{newsid}.txt` préf. vidzy, (2) pattern `/tv/{id}/s/{S}/e/{E}`, (3) DOM ; défaut list-only ; `--auto-download` séquentiel + export Jellyfin série ; pick HLS vidéo vs `index-a1`  
-- `flix` : digest nouveautés hubs favoris via RSS DLE (`FlixService` / `flix_seen.json`) — propose, n’auto-télécharge pas ; `pick --enqueue` → `season`/`fetch`
+- `season` : résolution page via favoris (`SeasonResolver` : bookmark titre → sinon search sites favoris) puis énumération (1) catalogue `/data/eps_{id}.txt`, (2) pattern `/tv/{id}/s/{S}/e/{E}`, (3) DOM ; défaut list-only ; `--auto-download` séquentiel + export Jellyfin série ; pick HLS vidéo vs `index-a1`  
+- `flix` : digest nouveautés hubs favoris via RSS (`FlixService` / `flix_seen.json`) — propose, n’auto-télécharge pas ; `pick --enqueue` → `season`/`fetch`
 
-- Install agent ollamac : `~/.local/opt/openstream-cli/` + symlink `~/.local/bin/openstream-cli` (user `rosito`) ; exports défaut `~/Downloads/OpenStream`  
+- Install agent type : `~/.local/opt/openstream-cli/` + symlink `~/.local/bin/openstream-cli` ; exports défaut `~/Downloads/OpenStream`  
 
 - Inbox `--via-app` conservée comme pont optionnel vers la GUI  
 **Date :** 2026-10-17
 
 ### D019 — Flix (digest CLI)
-**Décision :** sous-commande `flix` native (scan/digest/bootstrap/seen/pick). Source V1 = RSS `{origin}/engine/rss.php` ; normalisation host → favori ; hubs sans RSS = skip. Seen à la proposition (`--mark-seen`), pas au download.  
+**Décision :** sous-commande `flix` native (scan/digest/bootstrap/seen/pick). Source V1 = RSS hub (`{origin}/engine/rss.php` si dispo) ; normalisation host → favori ; hubs sans RSS = skip. Seen à la proposition (`--mark-seen`), pas au download. Doc publique : placeholders uniquement (pas de noms de sites).  
 **Date :** 2026-10-17
 
 ---
@@ -208,8 +208,9 @@ La relance manuelle reste disponible ; elle ne doit plus être le chemin nominal
 | 2026-10-05 | D016 : MP4 progressif via URLSession.download (plus de data(for:) en RAM) |
 | 2026-10-17 | D017 : FFmpeg statique embarqué (Helpers) — plus de casse via brew/x265 |
 | 2026-10-17 | D018 : openstream-cli headless (download/fetch/JSON agent) |
-| 2026-10-17 | D018+ : `season` (FS eps_*.txt / MOVIX / DOM) ; pick HLS vidéo ; deploy ollamac ; doc agent |
-| 2026-10-17 | `SeasonResolver` : `season 'Tulsa King'` via favoris/search sites — plus besoin d’URL page |
+| 2026-10-17 | D018+ : `season` (eps_*.txt / watch-path / DOM) ; pick HLS vidéo ; doc agent |
+| 2026-10-17 | Doc publique : placeholders (pas de noms/hôtes de sites stream) |
+| 2026-10-17 | `SeasonResolver` : `season '<show>'` via favoris/search sites — plus besoin d’URL page |
 | 2026-10-01 | Segments HLS « .image » : faux en-tête PNG devant MPEG-TS (TikTok CDN) — strip + rename .ts avant FFmpeg |
 | 2026-10-01 | Bug suite : download renommait en `.ts` mais playlist gardait `.image` — reconcile URIs avant mux |
 | 2026-10-01 | Fix assemble .image : planifier déjà en `.ts`, réécrire playlist depuis fichiers réels, re-DL si segments manquants |

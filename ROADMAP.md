@@ -169,7 +169,7 @@ Références : `PRD_OpenStream.md`, `ARCHITECTURE.md`, `MEMORY.md`, `CLAUDE.md`.
 - [x] Target `OpenStreamCLI` + `OpenStreamCore` (queue, parsers, FFmpeg Helpers)
 - [x] Commandes `download` / `fetch` / `status` / `wait` / `cancel` + JSON Lines
 - [x] `fetch` WKWebView offscreen + titres (`PageTitleResolver`)
-- [x] `season` : catalogue FS `eps_*.txt` / pattern MOVIX / DOM ; `--auto-download` séquentiel
+- [x] `season` : catalogue `eps_*.txt` / pattern watch-path / DOM ; `--auto-download` séquentiel
 - [x] Préférence variante HLS vidéo vs audio-only ; export série Jellyfin
 - [x] Playbook agent : `OpenStreamCLI/README.md`
 - [x] FFmpeg embarqué (D017) partagé app + CLI
@@ -182,10 +182,10 @@ Références : `PRD_OpenStream.md`, `ARCHITECTURE.md`, `MEMORY.md`, `CLAUDE.md`.
 **Objectif :** lister les nouveautés des hubs favoris (RSS) sans `fetch` sur une homepage.
 
 - [x] `flix scan` / `digest` / `bootstrap` / `seen` / `pick`
-- [x] RSS DLE + normalisation host favori ; hubs sans RSS = skip
+- [x] RSS hubs + normalisation host favori ; hubs sans RSS = skip
 - [x] `flix_seen.json` / `flix_last_digest.json` ; `--mark-seen` ; bootstrap auto si seen vide
 - [x] `pick --enqueue` → `season` / `fetch`
-- [x] Doc agent + deploy ollamac
+- [x] Doc agent (placeholders publics)
 
 **Done quand :** `flix digest --json` renvoie un digest exploitable par un agent (ou `count: 0`).  
 **Statut :** ✅ livré 2026-10-17

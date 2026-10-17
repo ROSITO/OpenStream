@@ -20,34 +20,31 @@ CLI="$(ls -d "$HOME"/Library/Developer/Xcode/DerivedData/OpenStream-*/Build/Prod
 
 Produit : `openstream-cli` (`PRODUCT_NAME`). Bundle id : `app.openstream.OpenStreamCLI`.
 
-### Install agent sur ollamac (Mac Mini)
+### Install agent (machine distante)
 
-Déployé pour l’utilisateur `rosito` :
+Emplacement recommandé :
 
 | | |
 |--|--|
 | Binaire + FFmpeg | `~/.local/opt/openstream-cli/` |
 | Lien PATH | `~/.local/bin/openstream-cli` |
 | Doc | `~/.local/opt/openstream-cli/README.md` |
-| Exports défaut | `~/Downloads/OpenStream` **sur ollamac** (`/Users/rosito/Downloads/OpenStream`) |
+| Exports défaut | `~/Downloads/OpenStream` |
 
 ```bash
-ssh MacMiniM4_ext   # ou: ssh rosito@ollamac
 export PATH="$HOME/.local/bin:$PATH"
 openstream-cli help
 ```
-
-SSH : user `rosito` (alias `MacMiniM4_ext` / `ollamac` Tailscale).
 
 Redeploy depuis la machine de build :
 
 ```bash
 xcodebuild -scheme OpenStreamCLI -configuration Release -destination 'platform=macOS' build
 PROD="$HOME/Library/Developer/Xcode/DerivedData/OpenStream-*/Build/Products/Release"
-rsync -az -e 'ssh -o BatchMode=yes' \
+rsync -az \
   "$PROD/openstream-cli" "$PROD/Helpers" "$PROD/ffmpeg" "$PROD/ffprobe" \
   OpenStreamCLI/README.md \
-  MacMiniM4_ext:~/.local/opt/openstream-cli/
+  user@agent-host:~/.local/opt/openstream-cli/
 # Helpers/ doit finir dans ~/.local/opt/openstream-cli/Helpers/
 ```
 
@@ -72,25 +69,25 @@ Règle simple : **URL fichier média → `download`**. **URL page HTML → `fetc
 
 ### NL agent (Intendant) — résolution via favoris
 
-`season` **cherche tout seul** : (1) favori page dont le titre matche la série/saison, sinon (2) recherche DLE sur les **sites** favoris (FS26…). L’agent ne doit **pas** demander l’URL à l’utilisateur.
+`season` **cherche tout seul** : (1) favori page dont le titre matche la série/saison, sinon (2) recherche sur les **sites** favoris (CMS / barre de recherche). L’agent ne doit **pas** demander l’URL à l’utilisateur.
 
 | Message utilisateur | Commande | Comportement |
 |---------------------|----------|--------------|
-| « Télécharge la saison de Tulsa King » | `season 'Tulsa King' --season 1 --json` | Favoris → page saison → liste / download |
-| Lien `…/newsid=…` déjà connu | `season <url> --show 'Tulsa King' --season 1` | Skip résolution, énumère directement |
+| « Télécharge la saison de Example Show » | `season 'Example Show' --season 1 --json` | Favoris → page saison → liste / download |
+| URL page saison déjà connue | `season <url> --show 'Example Show' --season 1` | Skip résolution, énumère directement |
 
 ```bash
-# Cas nominal Intendant (pas d’URL)
-openstream-cli season 'Tulsa King' --season 1 --json
+# Cas nominal agent (pas d’URL)
+openstream-cli season 'Example Show' --season 1 --json
 # équivalent :
-openstream-cli season --show 'Tulsa King' --season 1 --json --auto-download
+openstream-cli season --show 'Example Show' --season 1 --json --auto-download
 ```
 
 Mauvaise commande :
 
 ```bash
 # --title = phrase NL → ne sert pas à la résolution favoris
-openstream-cli season … --title 'Telecharge la saison de Tulsa King'
+openstream-cli season … --title 'Telecharge la saison de Example Show'
 ```
 
 ---
@@ -111,7 +108,7 @@ openstream-cli ping | open <url> | inbox | help
 
 ### Flix — digest nouveautés (hubs favoris)
 
-Scanne le RSS DLE (`/engine/rss.php`) des **homepages** en favoris (ex. FS26). **Propose** un digest numéroté — **n’auto-télécharge pas**.
+Scanne le RSS des **homepages** en favoris (ex. `{origin}/engine/rss.php` sur CMS courants). **Propose** un digest numéroté — **n’auto-télécharge pas**.
 
 ```
 openstream-cli flix scan [--json] [--max N] [--since ISO|Nd]
@@ -130,11 +127,11 @@ openstream-cli flix pick <n|n,m> [--enqueue] [--json]
 | `pick 1,3` | Résout depuis le **dernier digest** → `show`/`season` ou `url` |
 | `pick … --enqueue` | Sous-processus `season … --auto-download` ou `fetch … --auto-download` |
 
-**Favoris :** homepages uniquement (pages `newsid=` ignorées comme hub, host conservé).  
-**Liens RSS :** host réécrit vers le favori (`fs20.lol` → `fs26.lol`).  
-**Hubs sans RSS** (Interra, Rizmov…) → warning **stderr**, skip ; exit 0 si au moins un hub OK.  
+**Favoris :** homepages uniquement (pages catalogue ciblées ignorées comme hub, host conservé).  
+**Liens RSS :** host réécrit vers celui du favori bookmarqué (miroir → hub).  
+**Hubs sans RSS** → warning **stderr**, skip ; exit 0 si au moins un hub OK.  
 **État :** `~/Library/Application Support/OpenStream/flix_seen.json` + `flix_last_digest.json`.  
-**Piège :** ne pas `fetch https://fs26.lol/` pour lister un catalogue → timeout média (exit 7).
+**Piège :** ne pas `fetch` la homepage d’un hub pour lister un catalogue → timeout média (exit 7).
 
 #### JSON Flix (`--json`) — un objet stdout (pas JSON Lines)
 
@@ -147,14 +144,14 @@ openstream-cli flix pick <n|n,m> [--enqueue] [--json]
   "items": {
     "1": {
       "n": 1,
-      "id": "https://fs26.lol/index.php?newsid=15140996",
-      "url": "https://fs26.lol/index.php?newsid=15140996",
-      "title": "Tulsa King - Saison 4",
-      "show": "Tulsa King",
+      "id": "https://hub.example/show/example-s4",
+      "url": "https://hub.example/show/example-s4",
+      "title": "Example Show - Saison 4",
+      "show": "Example Show",
       "season": 4,
       "mode": "season",
-      "display": "Tulsa King — S4",
-      "source": "FS26",
+      "display": "Example Show — S4",
+      "source": "Hub",
       "pub_date": "Sat, 17 Oct 2026 03:17:57 +0200"
     }
   }
@@ -169,8 +166,8 @@ Texte humain (sans `--json`) si `count > 0` :
 
 ```text
 Flix — 2 nouveautés
-1. Tulsa King — S4 (FS26)
-2. MobLand — S2 (FS26)
+1. Example Show — S4 (Hub)
+2. Other Show — S2 (Hub)
 Réponds 1 / 1,3 ou season « Show » --season N
 ```
 
@@ -243,12 +240,12 @@ Parser ligne par ligne ; ignorer les lignes non-JSON (ne devrait pas arriver en 
 
 ```json
 {"event":"detected","kind":"hls","message":"detected","title":"Masterplan (2026)","url":"https://cdn.example/a.m3u8"}
-{"episode":4,"event":"episode","message":"episode","season":1,"show":"Friends","title":"Friends S01E04","url":"https://movix.example/watch/tv/1668/s/1/e/4"}
-{"completedUnits":24,"event":"season_done","message":"listed 24 episodes","season":1,"show":"Friends","totalUnits":24}
-{"event":"queued","jobId":"8DC51B08-…","kind":"progressive","message":"queued","title":"Friends S01E04"}
+{"episode":4,"event":"episode","message":"episode","season":1,"show":"Example Show","title":"Example Show S01E04","url":"https://watch.example/tv/1668/s/1/e/4"}
+{"completedUnits":24,"event":"season_done","message":"listed 24 episodes","season":1,"show":"Example Show","totalUnits":24}
+{"event":"queued","jobId":"8DC51B08-…","kind":"progressive","message":"queued","title":"Example Show S01E04"}
 {"completedUnits":12,"event":"progress","jobId":"…","kind":"hls","message":"Téléchargement 1% (12/1590)","progress":0.0075,"title":"…","totalUnits":1590}
 {"event":"assembling","jobId":"…","kind":"hls","message":"assembling","progress":0.99,"title":"…"}
-{"event":"completed","jobId":"…","kind":"hls","message":"completed","path":"/tmp/out/Friends/Saison 01/S01E04.mp4","progress":1,"title":"…"}
+{"event":"completed","jobId":"…","kind":"hls","message":"completed","path":"/tmp/out/Example Show/Saison 01/S01E04.mp4","progress":1,"title":"…"}
 {"event":"failed","jobId":"…","message":"HTTP 403"}
 ```
 
@@ -309,8 +306,8 @@ Sous-dossier d’export selon nomenclature :
 - plat / titre : `{title}/{title}.mp4`
 - série (`season --auto-download`) : `{show}/Saison {season}/S{season}E{episode}.mp4`
 
-Exemple test Tulsa King (machine de build, `--out` forcé) :  
-`/tmp/openstream-tulsa-s1b/Tulsa King S01E01/Tulsa King S01E01.mp4`
+Exemple (machine de build, `--out` forcé) :  
+`/tmp/openstream-out/Example Show/Saison 01/S01E01.mp4`
 
 Ne pas mélanger CLI et GUI sans `--shared-db`.
 
@@ -352,21 +349,21 @@ Ne pas mélanger CLI et GUI sans `--shared-db`.
 ### D — Saison (liste)
 
 ```bash
-# Via favoris (Intendant) — pas d’URL
-"$CLI" season 'Tulsa King' --season 1 --json
-# → info (resolved) → 9× episode → season_done
+# Via favoris — pas d’URL
+"$CLI" season 'Example Show' --season 1 --json
+# → info (resolved) → N× episode → season_done
 
 # URL page saison déjà connue
-"$CLI" season 'https://fs26.lol/index.php?newsid=15112864' \
-  --json --show 'Tulsa King' --season 1
+"$CLI" season 'https://hub.example/show/example-s1' \
+  --json --show 'Example Show' --season 1
 
-# MOVIX-like
-"$CLI" season 'https://movix.example/watch/tv/1668/s/1/e/1' \
-  --json --show Friends --season 1
+# Pattern watch-path
+"$CLI" season 'https://watch.example/tv/1668/s/1/e/1' \
+  --json --show 'Example Show' --season 1
 ```
 
 Énumération (dans l’ordre) :
-1. catalogue French Stream `/data/eps_{newsid}.txt` (embeds ; ordre lecteurs : `vidzy` → `premium` → …)
+1. catalogue JSON/texte type `/data/eps_{id}.txt` (embeds ; ordre lecteurs configuré)
 2. pattern URL `…/tv/{id}/s/{S}/e/{E}` (HEAD jusqu’à 2 misses)
 3. liens DOM si rien trouvé
 
@@ -376,12 +373,12 @@ Défaut = list-only.
 ### E — Saison (téléchargement séquentiel)
 
 ```bash
-"$CLI" season 'Tulsa King' --season 1 \
+"$CLI" season 'Example Show' --season 1 \
   --auto-download --json \
   --out ~/Downloads/OpenStream \
   --timeout 90
 # info → episode → fetch embed → detected → queued → … → season_done
-# Fichiers : ~/Downloads/OpenStream/Tulsa King/Saison 01/S01E0x.mp4
+# Fichiers : ~/Downloads/OpenStream/Example Show/Saison 01/S01E0x.mp4
 ```
 
 ### F — Pseudo-code agent
@@ -418,10 +415,10 @@ on failed: surface message + exit code
 
 # L’utilisateur répond « 1 » ou « 1,3 »
 "$CLI" flix pick 1 --json
-# → [{"mode":"season","show":"Tulsa King","season":4,"url":"…"}]
+# → [{"mode":"season","show":"Example Show","season":4,"url":"…"}]
 
 "$CLI" flix pick 1 --enqueue --json
-# → season 'Tulsa King' --season 4 --auto-download --json
+# → season 'Example Show' --season 4 --auto-download --json
 ```
 
 ---

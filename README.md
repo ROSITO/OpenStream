@@ -57,10 +57,10 @@ CLI="$(ls -d "$HOME"/Library/Developer/Xcode/DerivedData/OpenStream-*/Build/Prod
 "$CLI" fetch 'https://…/watch' --detect-only --json --timeout 60
 
 # Saison par nom (favoris) ou URL page
-"$CLI" season 'Tulsa King' --season 1 --json
-"$CLI" season 'https://fs26.lol/index.php?newsid=…' --json --show 'Tulsa King' --season 1
+"$CLI" season 'Example Show' --season 1 --json
+"$CLI" season 'https://catalog.example/show/s1' --json --show 'Example Show' --season 1
 
-# Digest nouveautés (RSS hubs favoris) — pas de download auto
+# Digest nouveautés (RSS des hubs en favoris) — pas de download auto
 "$CLI" flix bootstrap --json
 "$CLI" flix digest --json --mark-seen
 "$CLI" flix pick 1 --enqueue --json

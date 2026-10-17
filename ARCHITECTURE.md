@@ -146,9 +146,9 @@ openstream-cli → OpenStreamCore (fetch/season/flix/download)
 - **CLI headless (D018) :** target `OpenStreamCLI` + façade `OpenStreamCore/`
   - `download` / `fetch` / `season` / `flix` / `status` / `wait` / `cancel`
   - JSON Lines stdout (`AgentEvent`) + exit codes — contrat : `OpenStreamCLI/README.md`
-  - `flix` (D019) : RSS DLE des hubs favoris → `flix_seen.json` / digest numéroté → `pick` → `season`/`fetch`
+  - `flix` (D019) : RSS des hubs favoris → `flix_seen.json` / digest numéroté → `pick` → `season`/`fetch`
   - `HeadlessBrowserSession` (WKWebView offscreen) pour détection page + titres
-  - `EpisodeEnumerator` : catalogue French Stream `/data/eps_{newsid}.txt`, pattern MOVIX `/tv/{id}/s/{S}/e/{E}`, liens DOM
+  - `EpisodeEnumerator` : catalogue `/data/eps_{id}.txt`, pattern watch `/tv/{id}/s/{S}/e/{E}`, liens DOM
   - FFmpeg via `Helpers/` à côté du binaire (même stratégie D017)
   - DB jobs : `Application Support/OpenStream/cli-store/` (`--shared-db` pour l’app)
   - Pont GUI optionnel : inbox + `LocalCommandServer` (`--via-app`)
