@@ -1,0 +1,62 @@
+name: Bug report
+description: Something broken in the macOS app or openstream-cli
+title: "[Bug]: "
+labels: ["bug"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        OpenStream does **not** support DRM bypass or decryption. Reports asking for that will be closed.
+  - type: input
+    id: version
+    attributes:
+      label: Version
+      description: App/CLI version or git commit (e.g. 0.1.18)
+      placeholder: "0.1.18"
+    validations:
+      required: true
+  - type: input
+    id: macos
+    attributes:
+      label: macOS version
+      placeholder: "15.x / 14.x"
+    validations:
+      required: true
+  - type: dropdown
+    id: component
+    attributes:
+      label: Component
+      options:
+        - App (GUI)
+        - openstream-cli
+        - Both / unsure
+    validations:
+      required: true
+  - type: textarea
+    id: steps
+    attributes:
+      label: Steps to reproduce
+      placeholder: |
+        1. …
+        2. …
+        3. …
+    validations:
+      required: true
+  - type: textarea
+    id: expected
+    attributes:
+      label: Expected behavior
+    validations:
+      required: true
+  - type: textarea
+    id: actual
+    attributes:
+      label: Actual behavior
+    validations:
+      required: true
+  - type: textarea
+    id: logs
+    attributes:
+      label: Logs / JSON Lines (optional)
+      description: Redact cookies and personal URLs. Prefer example.com placeholders for hosts.
+      render: text

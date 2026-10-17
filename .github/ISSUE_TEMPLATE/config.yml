@@ -6,3 +6,9 @@ contact_links:
   - name: Releases
     url: https://github.com/ROSITO/OpenStream/releases
     about: Download the macOS app and CLI builds.
+  - name: Code of Conduct
+    url: https://github.com/ROSITO/OpenStream/blob/main/CODE_OF_CONDUCT.md
+    about: Community standards (Contributor Covenant).
+  - name: Security policy
+    url: https://github.com/ROSITO/OpenStream/blob/main/SECURITY.md
+    about: Report a vulnerability privately when possible.

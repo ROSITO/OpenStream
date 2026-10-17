@@ -84,6 +84,7 @@ Exports par défaut : `~/Downloads/OpenStream` (`--out` pour override).
 ## Contribuer / sécurité
 
 - [`CONTRIBUTING.md`](CONTRIBUTING.md) — build, PRs, règles
+- [`CODE_OF_CONDUCT.md`](CODE_OF_CONDUCT.md) — Contributor Covenant
 - [`SECURITY.md`](SECURITY.md) — signaler une faille (pas de demandes DRM)
 
 ## Licence

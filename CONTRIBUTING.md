@@ -4,6 +4,7 @@ Thanks for your interest. OpenStream is a **macOS** app + headless CLI for downl
 
 ## Ground rules
 
+- Follow the [Code of Conduct](CODE_OF_CONDUCT.md).
 - No DRM circumvention, no decryption of protected streams, no auth bypass.
 - Prefer small, focused PRs that match `ARCHITECTURE.md` module boundaries.
 - Read `MEMORY.md` before non-trivial design changes.
