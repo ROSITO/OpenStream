@@ -37,8 +37,8 @@ targets:
       base:
         PRODUCT_BUNDLE_IDENTIFIER: app.openstream.OpenStream
         PRODUCT_NAME: OpenStream
-        MARKETING_VERSION: "0.1.17"
-        CURRENT_PROJECT_VERSION: "18"
+        MARKETING_VERSION: "0.1.18"
+        CURRENT_PROJECT_VERSION: "19"
         GENERATE_INFOPLIST_FILE: YES
         INFOPLIST_KEY_CFBundleDisplayName: OpenStream
         INFOPLIST_KEY_LSApplicationCategoryType: public.app-category.utilities

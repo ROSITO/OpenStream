@@ -759,7 +759,7 @@
 				CODE_SIGN_ENTITLEMENTS = OpenStream/Resources/OpenStream.entitlements;
 				CODE_SIGN_IDENTITY = "-";
 				COMBINE_HIDPI_IMAGES = YES;
-				CURRENT_PROJECT_VERSION = 18;
+				CURRENT_PROJECT_VERSION = 19;
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_KEY_CFBundleDisplayName = OpenStream;
@@ -769,7 +769,7 @@
 					"$(inherited)",
 					"@executable_path/../Frameworks",
 				);
-				MARKETING_VERSION = 0.1.17;
+				MARKETING_VERSION = 0.1.18;
 				PRODUCT_BUNDLE_IDENTIFIER = app.openstream.OpenStream;
 				PRODUCT_NAME = OpenStream;
 				SDKROOT = macosx;
@@ -878,7 +878,7 @@
 				CODE_SIGN_ENTITLEMENTS = OpenStream/Resources/OpenStream.entitlements;
 				CODE_SIGN_IDENTITY = "-";
 				COMBINE_HIDPI_IMAGES = YES;
-				CURRENT_PROJECT_VERSION = 18;
+				CURRENT_PROJECT_VERSION = 19;
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_KEY_CFBundleDisplayName = OpenStream;
@@ -888,7 +888,7 @@
 					"$(inherited)",
 					"@executable_path/../Frameworks",
 				);
-				MARKETING_VERSION = 0.1.17;
+				MARKETING_VERSION = 0.1.18;
 				PRODUCT_BUNDLE_IDENTIFIER = app.openstream.OpenStream;
 				PRODUCT_NAME = OpenStream;
 				SDKROOT = macosx;
