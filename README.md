@@ -81,6 +81,11 @@ Exports par défaut : `~/Downloads/OpenStream` (`--out` pour override).
 | [`MEMORY.md`](MEMORY.md) | Décisions figées (D014 navigateur, D018 CLI, D019 flix…) |
 | [`CLAUDE.md`](CLAUDE.md) | Règles agents |
 
+## Contribuer / sécurité
+
+- [`CONTRIBUTING.md`](CONTRIBUTING.md) — build, PRs, règles
+- [`SECURITY.md`](SECURITY.md) — signaler une faille (pas de demandes DRM)
+
 ## Licence
 
 [MIT](LICENSE). FFmpeg est invoqué comme binaire externe (`Process`), sans liaison libav* (LGPL FFmpeg reste séparée).

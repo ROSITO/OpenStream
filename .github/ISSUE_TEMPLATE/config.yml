@@ -1,0 +1,8 @@
+blank_issues_enabled: true
+contact_links:
+  - name: Agent CLI contract
+    url: https://github.com/ROSITO/OpenStream/blob/main/OpenStreamCLI/README.md
+    about: How agents should call openstream-cli (JSON, flix, season).
+  - name: Releases
+    url: https://github.com/ROSITO/OpenStream/releases
+    about: Download the macOS app and CLI builds.
