@@ -139,7 +139,7 @@ V3
 
 # 9. Licence
 
-MIT ou GPLv3 selon l'orientation communautaire.
+MIT (voir `LICENSE`).
 
 ---
 

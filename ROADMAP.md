@@ -110,7 +110,7 @@ Références : `PRD_OpenStream.md`, `ARCHITECTURE.md`, `MEMORY.md`, `CLAUDE.md`.
 - [x] Logging structuré + catégories (`AppLog`)
 - [x] Nettoyage fichiers temporaires (`.parts` orphelins au lancement + bouton réglages)
 - [x] UI non-debug (paramètres, empty states, sheet qualité)
-- [x] Décision licence + stratégie FFmpeg/LGPL **notées** dans MEMORY (licence produit encore ouverte)
+- [x] Licence produit **MIT** + FFmpeg externe (LGPL) via `Process` (pas de linking libav*)
 
 **Done quand :** utilisable par un tiers sans console debug ; pas de fuites de temp évidentes.  
 **Statut :** ✅ livré 2026-07-29 — panneau Paramètres (dossier, proxy/VPN, retries, qualité HLS)

@@ -10,7 +10,7 @@ Instructions permanentes pour tout agent (Cursor, Claude Code, Codex) travaillan
 
 - Stack : Swift 6, SwiftUI, WKWebView, URLSession, async/await, SQLite, FFmpeg
 - Cible : macOS 14+ (Sonoma), Apple Silicon + Intel
-- Licence : à trancher (MIT ou GPLv3) — ne pas committer de `LICENSE` tant que non décidé
+- Licence : **MIT** (`LICENSE`)
 
 Documents de référence (lire dans cet ordre) :
 

@@ -12,7 +12,7 @@ Mémoire projet : décisions figées, contraintes, et pièges.
 |-------|--------|
 | Phase roadmap | Phase 5 ✅ — prochaine : Phase 6 (DASH / audio / subs) |
 | Code applicatif | MVP durci + panneau Paramètres (dossier, proxy, qualité) |
-| Licence | Non tranchée (MIT vs GPLv3) |
+| Licence | **MIT** (`LICENSE`, 2026) |
 | Bundle ID | `app.openstream.OpenStream` |
 | Nom package / target | OpenStream (mono-target) |
 | macOS min | 14.0 |
@@ -69,8 +69,8 @@ Mémoire projet : décisions figées, contraintes, et pièges.
 **Décision :** le navigateur WKWebView suit le VPN/proxy **système**. Un proxy HTTP/SOCKS5 optionnel s’applique uniquement aux `URLSession` de détection/téléchargement.  
 **Date :** 2026-07-29
 
-### D012 — Licence (en attente)
-**Décision provisoire :** pas de fichier `LICENSE` tant que MIT vs GPLv3 n’est pas tranché. FFmpeg reste un binaire externe (LGPL) invoqué par Process — pas de linking statique (compatible avec MIT ou GPL côté app, selon distribution du binaire).  
+### D012 — Licence MIT
+**Décision :** licence produit **MIT** (2026-10-17). FFmpeg reste un binaire externe (LGPL) invoqué par `Process` — pas de linking libav* ; la LGPL FFmpeg s’applique au binaire FFmpeg, pas au code OpenStream.  
 **Date :** 2026-07-29
 
 **Décision (amendée D017) :** FFmpeg invoqué via `Process`, pas de liaison libav*. Binaire **embarqué** dans le bundle (`Helpers/`) en priorité ; Homebrew/PATH seulement si Helpers absents. Remux `-c copy` + playlist HLS locales.  
@@ -137,7 +137,7 @@ La relance manuelle reste disponible ; elle ne doit plus être le chemin nominal
 
 ## Ouvert / à trancher
 
-- [ ] Licence MIT vs GPLv3 (impact si FFmpeg lié dynamiquement vs statiquement — vérifier compatibilité LGPL FFmpeg)
+- [x] Licence → **MIT** (2026-10-17)
 - [x] Distribution FFmpeg : **embarqué** (`Helpers/`, fetch script) — Homebrew secours seulement (D017)
 - [ ] Bundle identifier — **tranché :** `app.openstream.OpenStream` (D009)
 - [ ] Stratégie App Sandbox + entitlements réseau / downloads folder — **sandbox ON** (network client + downloads + user-selected R/W) ; à valider en usage réel
@@ -210,6 +210,7 @@ La relance manuelle reste disponible ; elle ne doit plus être le chemin nominal
 | 2026-10-17 | D018 : openstream-cli headless (download/fetch/JSON agent) |
 | 2026-10-17 | D018+ : `season` (eps_*.txt / watch-path / DOM) ; pick HLS vidéo ; doc agent |
 | 2026-10-17 | Doc publique : placeholders (pas de noms/hôtes de sites stream) |
+| 2026-10-17 | Licence produit → MIT (`LICENSE`) |
 | 2026-10-17 | `SeasonResolver` : `season '<show>'` via favoris/search sites — plus besoin d’URL page |
 | 2026-10-01 | Segments HLS « .image » : faux en-tête PNG devant MPEG-TS (TikTok CDN) — strip + rename .ts avant FFmpeg |
 | 2026-10-01 | Bug suite : download renommait en `.ts` mais playlist gardait `.image` — reconcile URIs avant mux |

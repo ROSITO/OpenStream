@@ -83,4 +83,4 @@ Exports par défaut : `~/Downloads/OpenStream` (`--out` pour override).
 
 ## Licence
 
-Pas encore tranchée (MIT ou GPLv3). FFmpeg est invoqué comme binaire externe (`Process`), sans liaison libav*.
+[MIT](LICENSE). FFmpeg est invoqué comme binaire externe (`Process`), sans liaison libav* (LGPL FFmpeg reste séparée).
