@@ -47,27 +47,29 @@ Paramètres → **Navigateur** (défaut ON) : popups / pubs / alertes JS bloqué
 
 ## CLI / agent IA
 
+`openstream-cli` est conçu pour être **piloté par un agent** (chat, cron, bot) : l’agent route l’intention NL vers une commande, lit le JSON + exit code, et confirme les chemins à l’utilisateur. Il ne réimplémente pas favoris / RSS / download.
+
+Playbook agentique (contrat, routage NL → commande, boucle digest → pick, règles dures) : **[`OpenStreamCLI/README.md` — Utilisation agentique](OpenStreamCLI/README.md#utilisation-agentique)**.
+
 ```bash
 CLI="$(ls -d "$HOME"/Library/Developer/Xcode/DerivedData/OpenStream-*/Build/Products/Release/openstream-cli | head -1)"
+# ou: openstream-cli  si installé dans ~/.local/bin
 
 # URL média connue
-"$CLI" download 'https://…/video.mp4' --json --referer 'https://…/watch' --out ~/Downloads/OpenStream
+"$CLI" download 'https://cdn.example/video.mp4' --json --referer 'https://watch.example/ep' --out ~/Downloads/OpenStream
 
 # Page → détecter un flux
-"$CLI" fetch 'https://…/watch' --detect-only --json --timeout 60
+"$CLI" fetch 'https://watch.example/ep' --detect-only --json --timeout 60
 
-# Saison par nom (favoris) ou URL page
-"$CLI" season 'Example Show' --season 1 --json
-"$CLI" season 'https://catalog.example/show/s1' --json --show 'Example Show' --season 1
+# Saison par nom (favoris) — l’agent ne demande pas l’URL
+"$CLI" season 'Example Show' --season 1 --auto-download --json
 
-# Digest nouveautés (RSS des hubs en favoris) — pas de download auto
-"$CLI" flix bootstrap --json
+# Digest nouveautés → l’utilisateur choisit 1 / 1,3
 "$CLI" flix digest --json --mark-seen
 "$CLI" flix pick 1 --enqueue --json
 ```
 
-Exports par défaut : `~/Downloads/OpenStream` (override avec `--out`).  
-Playbook agent (JSON Lines, `flix`, `season`, exit codes) : **[`OpenStreamCLI/README.md`](OpenStreamCLI/README.md)**.
+Exports par défaut : `~/Downloads/OpenStream` (`--out` pour override).
 
 ## Docs produit
 

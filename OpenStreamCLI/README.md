@@ -67,28 +67,96 @@ rsync -az \
 
 Règle simple : **URL fichier média → `download`**. **URL page HTML → `fetch`**. **Nom de série ou page saison → `season`**. **Hubs / « quoi de neuf ? » → `flix`** (pas `fetch` sur la homepage).
 
-### NL agent (Intendant) — résolution via favoris
+---
 
-`season` **cherche tout seul** : (1) favori page dont le titre matche la série/saison, sinon (2) recherche sur les **sites** favoris (CMS / barre de recherche). L’agent ne doit **pas** demander l’URL à l’utilisateur.
+## Utilisation agentique
 
-| Message utilisateur | Commande | Comportement |
-|---------------------|----------|--------------|
-| « Télécharge la saison de Example Show » | `season 'Example Show' --season 1 --json` | Favoris → page saison → liste / download |
-| URL page saison déjà connue | `season <url> --show 'Example Show' --season 1` | Skip résolution, énumère directement |
+L’agent (assistant, cron, bot messagerie) **orchestre** `openstream-cli` : il parse l’intention utilisateur, lance la bonne commande avec `--json`, lit stdout + exit code, puis répond en langage naturel. Il **ne réimplémente pas** RSS, favoris, ni le pipeline download.
 
-```bash
-# Cas nominal agent (pas d’URL)
-openstream-cli season 'Example Show' --season 1 --json
-# équivalent :
-openstream-cli season --show 'Example Show' --season 1 --json --auto-download
+### Rôle de l’agent
+
+| Fait l’agent | Fait le CLI |
+|--------------|-------------|
+| Comprendre la demande NL | Résoudre favoris / RSS / embeds |
+| Choisir `flix` / `season` / `fetch` / `download` | Détecter, télécharger, assembler |
+| Proposer un digest numéroté, attendre un choix | Persister `seen` / dernier digest |
+| Confirmer un chemin fichier à l’utilisateur | Écrire sous `~/Downloads/OpenStream` |
+| Remonter erreurs (exit code + `event=failed`) | Retries réseau, mux FFmpeg |
+
+### Contrat d’invocation
+
+1. Toujours `--json` (sauf debug humain).
+2. Parser **stdout** :
+   - `download` / `fetch` / `season` → **JSON Lines** (une ligne = un `AgentEvent`)
+   - `flix` → **un seul objet JSON**
+3. Stderr = warnings (hubs sans RSS, bootstrap auto…) — loguer, ne pas planter si exit 0.
+4. Exit code : `0` ok · `2` usage · `3` réseau · `4` assemble · `5` introuvable · `6` annulé · `7` detect timeout.
+5. Succès download : dernière ligne utile `event=completed` + champ `path`.
+
+### Routage intention → commande
+
+| Intention utilisateur (exemples) | Action agent |
+|----------------------------------|--------------|
+| « Qu’est-ce qui est sorti ? » / « nouveautés » / digest | `flix digest --json --mark-seen` → afficher `1…N` ; si `count=0`, silence ou « rien de neuf » |
+| Réponse `1` / `1,3` après un digest | `flix pick 1,3 --enqueue --json` (ou `pick` sans `--enqueue` puis confirmer) |
+| « Télécharge la saison de *Show* » | `season 'Show' --season N --auto-download --json` (N=1 si non dit) |
+| « Liste les épisodes de *Show* S2 » | `season 'Show' --season 2 --json` (list-only) |
+| Lien page watch / épisode | `fetch <url> --auto-download --json` (ou `--detect-only` puis `download`) |
+| URL `.m3u8` / `.mpd` / `.mp4` | `download <url> --json --referer <page>` |
+| « Annule / status » | `cancel` / `status` / `wait` avec `jobId` |
+
+### Boucle type (messagerie / chat)
+
+```
+1. User: « quoi de neuf ? »
+2. Agent: flix digest --json --mark-seen
+3. Agent → User: liste numérotée (display + source)  OU  « rien de neuf »
+4. User: « 1 » ou « 1 et 3 »
+5. Agent: flix pick 1,3 --enqueue --json
+6. Agent suit les JSON Lines (episode → queued → … → completed / season_done)
+7. Agent → User: chemins des fichiers ou message d’échec
 ```
 
-Mauvaise commande :
+Saison directe (sans digest) :
+
+```
+1. User: « télécharge Example Show saison 1 »
+2. Agent: season 'Example Show' --season 1 --auto-download --json
+3. Agent → User: résumé (N épisodes) + dossier d’export
+```
+
+### Règles dures pour l’agent
+
+- **Ne pas demander l’URL** si un nom de série suffit : `season` résout via favoris / recherche sur les hubs bookmarqués.
+- **Ne pas** mettre la phrase NL dans `--title` (`--title 'Telecharge la saison de…'` casse le matching). Extraire `show` + `season`.
+- **Ne pas** `fetch` la homepage d’un hub pour « lister le catalogue » → timeout (exit 7). Utiliser `flix` ou `season <nom>`.
+- **Ne pas** auto-télécharger tout un digest sans choix utilisateur (sauf consigne explicite).
+- Premier run Flix : `flix bootstrap` (ou laisser le bootstrap auto du premier `digest` → `count: 0`).
+- Cookies / referer : seulement si l’utilisateur a déjà une session ; pas de bypass login / DRM / captcha.
+
+### Favoris = sites, pas titres
+
+Les favoris OpenStream sont souvent des **hubs** (homepages). L’agent parle en **noms de séries** ; le CLI mappe vers les pages.
 
 ```bash
-# --title = phrase NL → ne sert pas à la résolution favoris
+# Bien
+openstream-cli season 'Example Show' --season 1 --json --auto-download
+
+# Mal
 openstream-cli season … --title 'Telecharge la saison de Example Show'
 ```
+
+### Cron / agent proactif
+
+Fréquence typique : 1–2× / semaine.
+
+```bash
+openstream-cli flix digest --json --mark-seen
+# count > 0 → notifier l’utilisateur (WA, mail, …) avec la liste 1…N
+# count = 0 → ne rien envoyer
+```
+
+Ensuite l’utilisateur répond `1` / `2,4` → `flix pick … --enqueue --json`.
 
 ---
 
@@ -381,7 +449,9 @@ Défaut = list-only.
 # Fichiers : ~/Downloads/OpenStream/Example Show/Saison 01/S01E0x.mp4
 ```
 
-### F — Pseudo-code agent
+### F — Pseudo-code (résumé)
+
+Voir aussi **[Utilisation agentique](#utilisation-agentique)** (contrat + boucles).
 
 ```
 if url looks like media (.m3u8|.mpd|.mp4|…):
@@ -438,9 +508,11 @@ on failed: surface message + exit code
 |---------|------|
 | `OpenStreamCLI/CLI.swift` | Parsing args, orchestration |
 | `OpenStreamCore/AgentJSON.swift` | `AgentEvent` + exit codes |
-| `OpenStreamCore/EpisodeEnumerator.swift` | Pattern URL + parse liens DOM |
+| `OpenStreamCore/FlixService.swift` | Digest RSS / seen / pick |
+| `OpenStreamCore/SeasonResolver.swift` | Nom de série → page via favoris |
+| `OpenStreamCore/EpisodeEnumerator.swift` | Catalogue / watch-path / DOM |
 | `OpenStreamCore/HeadlessDownloadService.swift` | Queue download sans UI |
 | `OpenStreamCore/HeadlessBrowserSession.swift` | WKWebView offscreen + titres / liens épisode |
 | `OpenStream/Browser/PageTitleResolver.swift` | Nettoyage titres |
 
-Décision figée : **MEMORY.md → D018**.
+Décisions : **MEMORY.md → D018** (CLI), **D019** (flix).
